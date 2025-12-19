@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">our-pot</string>
+    <string name="title_activity_main">our-pot</string>
+    <string name="package_name">com.ourpot.app</string>
+    <string name="custom_url_scheme">com.ourpot.app</string>
+</resources>
