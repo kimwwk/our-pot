@@ -7,7 +7,7 @@ import { QuickActions } from "@/components/widgets/QuickActions";
 import { useRouter } from "next/navigation";
 
 export default function TransactionsPage() {
-    const { transactions, isLoading } = useTransactions();
+    const { transactions, isLoading } = useTransactions({ limit: 50 });
     const router = useRouter();
 
     return (
@@ -19,7 +19,7 @@ export default function TransactionsPage() {
             <TransactionList
                 transactions={transactions}
                 isLoading={isLoading}
-                onTransactionClick={(id) => router.push(`/transactions/${id}/edit`)}
+                onTransactionClick={(id) => router.push(`/transactions/edit?id=${id}`)}
             />
         </div>
     );

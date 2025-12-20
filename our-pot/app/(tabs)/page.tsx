@@ -18,7 +18,7 @@ export default function HomePage() {
     const [showAddExpense, setShowAddExpense] = useState(false);
     const { db } = useSQLite();
     const { account } = useAccount();
-    const { transactions, isLoading, refetch } = useTransactions();
+    const { transactions, isLoading, refetch } = useTransactions({ limit: 5 });
     const router = useRouter();
 
     const handleAddExpense = async (data: any) => {
@@ -71,6 +71,7 @@ export default function HomePage() {
                 <TransactionList
                     transactions={transactions.slice(0, 5)}
                     isLoading={isLoading}
+                    onTransactionClick={(id) => router.push(`/transactions/edit?id=${id}`)}
                 />
             </div>
 

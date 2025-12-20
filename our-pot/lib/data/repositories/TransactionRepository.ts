@@ -7,6 +7,8 @@ export interface TransactionFilters {
     categoryId?: string;
     memberId?: string;
     type?: 'EXPENSE' | 'DEPOSIT';
+    limit?: number;
+    offset?: number;
 }
 
 export class TransactionRepository extends BaseRepository {
@@ -39,6 +41,16 @@ export class TransactionRepository extends BaseRepository {
         }
 
         query += ` ORDER BY date DESC, created_at DESC`;
+
+        if (filters?.limit) {
+            query += ` LIMIT ?`;
+            params.push(filters.limit);
+
+            if (filters?.offset) {
+                query += ` OFFSET ?`;
+                params.push(filters.offset);
+            }
+        }
 
         return this.executeQuery<Transaction>(query, params);
     }

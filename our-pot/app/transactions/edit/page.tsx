@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TransactionForm } from "@/components/forms/TransactionForm";
 import { TransactionFormData } from "@/lib/validators/transaction";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
@@ -13,9 +13,10 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Transaction } from "@/lib/data/types";
 
-export default function EditTransactionPage({ params }: { params: Promise<{ id: string }> }) {
+function EditTransactionContent() {
     const router = useRouter();
-    const { id } = use(params);
+    const searchParams = useSearchParams();
+    const id = searchParams.get("id");
     const { db } = useSQLite();
     const { account } = useAccount();
 
@@ -23,7 +24,7 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!db) return;
+        if (!db || !id) return;
 
         const fetchTx = async () => {
             try {
@@ -47,7 +48,7 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
     }, [db, id, router]);
 
     const handleSubmit = async (data: TransactionFormData) => {
-        if (!db || !account || !transaction) return;
+        if (!db || !account || !transaction || !id) return;
 
         try {
             const repo = new TransactionRepository(db);
@@ -74,7 +75,7 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
     };
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this transaction?") || !db) return;
+        if (!confirm("Are you sure you want to delete this transaction?") || !db || !id) return;
 
         try {
             const repo = new TransactionRepository(db);
@@ -123,5 +124,13 @@ export default function EditTransactionPage({ params }: { params: Promise<{ id: 
                 initialData={initialData}
             />
         </div>
+    );
+}
+
+export default function EditTransactionPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+            <EditTransactionContent />
+        </Suspense>
     );
 }
