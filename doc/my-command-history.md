@@ -1,5 +1,7 @@
 # 20251218
 
+## project manual setup
+
 ```bash
 npx create-next-app@latest
 

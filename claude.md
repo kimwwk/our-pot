@@ -2,6 +2,10 @@
 
 - use major.minor.patch to decide the number of implementation
 
+## Documentation Rules
+
+- All document references should use markdown link format. For example, [title](./filename.md). 
+- Use mermaid diagram if diagram is needed.
 
 ## Development Philosophy
 
