@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SQLiteProvider } from "@/lib/data/contexts/SQLiteContext";
+import { AccountProvider } from "@/lib/data/contexts/AccountContext";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -37,7 +38,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SQLiteProvider>
-            {children}
+            <AccountProvider>
+              {children}
+            </AccountProvider>
             <Toaster />
           </SQLiteProvider>
         </ThemeProvider>
