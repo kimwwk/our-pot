@@ -11,6 +11,7 @@ This SAD assumes familiarity with the following prerequisite documents:
 - **[TDD-1: PWA Strategy](./20251217-TDD-1-PWA%20strategy.md)** - Decisions incorporated into SAD Sections 1-2; keep for reference
 - **[TDD-2: Hybrid Architecture](./20251218-TDD-2-Hybrid%20Mobile%20Architecture.md)** - Decisions incorporated into SAD Sections 1-2; keep for reference
 - **[TDD-2 Alignment Analysis](./20251218-TDD-2-current%20alignment%20analysis.md)** - Current implementation status (tracks Phase 1/2/3 progress)
+- **[SAD v1.1: Backend Gateway](./20251218-SAD-v1-1-Backend-Gateway.md)** - Backend service addition for centralized API management (Dec 2025)
 - **[Backlog](./20251218-backlog1.md)** - Features and improvements deferred from v1
 
 **Reading Order:**

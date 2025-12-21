@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, User, Loader2, AlertCircle } from "lucide-react";
 import { useChangeSet } from "@/lib/data/contexts/ChangeSetContext";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
-import { allTools } from "@/lib/ai/tools";
 import {
   executeGetCategories,
   executeGetMembers,
@@ -33,46 +33,69 @@ export function AgentChatPanel() {
   // Ref to store pending confirmation resolver
   const pendingConfirmationResolver = useRef<((result: any) => void) | null>(null);
 
+  // Manage input state locally (v2 API doesn't provide it)
+  const [input, setInput] = useState("");
+
   const {
     messages,
-    input,
-    setInput,
-    handleSubmit: originalHandleSubmit,
-    isLoading,
+    sendMessage,
+    addToolOutput,
+    status,
     error,
   } = useChat({
-    api: "/api/chat",
-    headers: {
-      "x-openai-api-key": process.env.NEXT_PUBLIC_OPENAI_API_KEY || "",
-    },
-    body: {
-      tools: allTools, // Tool schemas
-    },
+    transport: new DefaultChatTransport({
+      api: process.env.NEXT_PUBLIC_BACKEND_URL + "/api/chat",
+    }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     async onToolCall({ toolCall }) {
       // CLIENT-SIDE TOOL EXECUTION
       const { toolName, args } = toolCall;
 
       if (!db || !account) {
-        return { error: "Database or account not initialized" };
+        addToolOutput({
+          tool: toolName,
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: "Database or account not initialized",
+        });
+        return;
       }
 
       try {
         // READ TOOLS (Immediate Execution)
         if (toolName === "getCategories") {
-          return await executeGetCategories(db, account.id);
+          const result = await executeGetCategories(db, account.id);
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         if (toolName === "getMembers") {
-          return await executeGetMembers(db, account.id);
+          const result = await executeGetMembers(db, account.id);
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         if (toolName === "searchTransactions") {
-          return await executeSearchTransactions(db, account.id, args);
+          const result = await executeSearchTransactions(db, account.id, args);
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         // PROPOSAL TOOLS (Buffered)
         if (toolName === "createTransactionChangeRequest") {
-          return await executeCreateTransactionChangeRequest(
+          const result = await executeCreateTransactionChangeRequest(
             db,
             account.id,
             {
@@ -81,10 +104,16 @@ export function AgentChatPanel() {
             },
             args
           );
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         if (toolName === "updateTransactionChangeRequest") {
-          return await executeUpdateTransactionChangeRequest(
+          const result = await executeUpdateTransactionChangeRequest(
             db,
             account.id,
             {
@@ -93,10 +122,16 @@ export function AgentChatPanel() {
             },
             args
           );
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         if (toolName === "deleteTransactionChangeRequest") {
-          return await executeDeleteTransactionChangeRequest(
+          const result = await executeDeleteTransactionChangeRequest(
             db,
             account.id,
             {
@@ -105,10 +140,16 @@ export function AgentChatPanel() {
             },
             args
           );
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         if (toolName === "createCategoryChangeRequest") {
-          return await executeCreateCategoryChangeRequest(
+          const result = await executeCreateCategoryChangeRequest(
             db,
             account.id,
             {
@@ -117,6 +158,12 @@ export function AgentChatPanel() {
             },
             args
           );
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
         // CONFIRMATION TOOL (Pause-Resume Pattern)
@@ -132,31 +179,57 @@ export function AgentChatPanel() {
           );
 
           if (!result.success) {
-            return result;
+            addToolOutput({
+              tool: toolName,
+              toolCallId: toolCall.toolCallId,
+              state: "output-error",
+              errorText: result.error || "Failed to confirm changeset",
+            });
+            return;
           }
 
-          // PAUSE AI STREAM - Return a promise that resolves when user approves/rejects
-          return new Promise((resolve) => {
-            pendingConfirmationResolver.current = resolve;
-          });
+          // Store the tool call ID so handleApprove/handleReject can send the output later
+          pendingConfirmationResolver.current = (resultData: any) => {
+            addToolOutput({
+              tool: toolName,
+              toolCallId: toolCall.toolCallId,
+              output: resultData,
+            });
+          };
+
+          // DO NOT call addToolOutput here - widget will trigger it via handleApprove/handleReject
+          return;
         }
 
         // RESET TOOL
         if (toolName === "resetChangeSet") {
-          return await executeResetChangeSet({
+          const result = await executeResetChangeSet({
             transitionToPendingApproval: changeSetContext.transitionToPendingApproval,
             clearBuffer: changeSetContext.clearBuffer,
             getBufferAsArray: changeSetContext.getBufferAsArray,
           });
+          addToolOutput({
+            tool: toolName,
+            toolCallId: toolCall.toolCallId,
+            output: result,
+          });
+          return;
         }
 
-        return { error: `Unknown tool: ${toolName}` };
+        addToolOutput({
+          tool: toolName,
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: `Unknown tool: ${toolName}`,
+        });
       } catch (error) {
         console.error(`Tool execution error (${toolName}):`, error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Tool execution failed",
-        };
+        addToolOutput({
+          tool: toolName,
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: error instanceof Error ? error.message : "Tool execution failed",
+        });
       }
     },
   });
@@ -175,7 +248,7 @@ export function AgentChatPanel() {
       // Transition to approved
       changeSetContext.transitionToApproved();
 
-      // Resume AI stream
+      // Resume AI stream by calling addToolOutput via resolver
       if (pendingConfirmationResolver.current) {
         const decision = buildContextAfterDecision({
           status: "approved",
@@ -209,7 +282,7 @@ export function AgentChatPanel() {
     // Iterative refinement - return to building state
     changeSetContext.transitionToBuilding();
 
-    // Resume AI stream with feedback
+    // Resume AI stream with feedback by calling addToolOutput via resolver
     if (pendingConfirmationResolver.current) {
       const decision = buildContextAfterDecision({
         status: "rejected_with_feedback",
@@ -228,7 +301,7 @@ export function AgentChatPanel() {
     // Complete rejection - clear buffer
     changeSetContext.transitionToRejected();
 
-    // Resume AI stream
+    // Resume AI stream by calling addToolOutput via resolver
     if (pendingConfirmationResolver.current) {
       const decision = buildContextAfterDecision({
         status: "rejected_completely",
@@ -249,12 +322,29 @@ export function AgentChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Check if chat is currently loading/streaming
+  const isLoading = status === "submitted" || status === "streaming";
+
+  // Handle input change
+  const handleInputChangeWrapper = (value: string) => {
+    setInput(value);
+  };
+
+  // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isInitialized || !account) {
+    if (!isInitialized || !account || !input.trim() || isLoading) {
       return;
     }
-    originalHandleSubmit(e);
+
+    const message = input.trim();
+    setInput(""); // Clear input immediately
+
+    // Send message with new format
+    sendMessage({
+      role: "user",
+      parts: [{ type: "text", text: message }],
+    });
   };
 
   if (!isInitialized || !account) {
@@ -346,7 +436,9 @@ export function AgentChatPanel() {
           >
             <div className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-4 w-4" />
-              <p className="text-sm font-medium">Error: {error.message}</p>
+              <p className="text-sm font-medium">
+                Error: {error instanceof Error ? error.message : String(error)}
+              </p>
             </div>
           </motion.div>
         )}
@@ -372,7 +464,7 @@ export function AgentChatPanel() {
         <form onSubmit={handleSubmit}>
           <AgentInput
             value={input}
-            onChange={setInput}
+            onChange={handleInputChangeWrapper}
             onSubmit={() => handleSubmit(new Event("submit") as any)}
             disabled={isLoading || changeSetContext.status === "pending_approval"}
           />

@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "our-pot-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-12-21",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "env": {
+    "production": {
+      "name": "our-pot-backend-production",
+      "vars": {
+        "ENVIRONMENT": "production"
+      }
+    }
+  }
+}
