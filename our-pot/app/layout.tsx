@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SQLiteProvider } from "@/lib/data/contexts/SQLiteContext";
 import { AccountProvider } from "@/lib/data/contexts/AccountContext";
+import { ChangeSetProvider } from "@/lib/data/contexts/ChangeSetContext";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -39,7 +40,9 @@ export default function RootLayout({
         >
           <SQLiteProvider>
             <AccountProvider>
-              {children}
+              <ChangeSetProvider>
+                {children}
+              </ChangeSetProvider>
             </AccountProvider>
             <Toaster />
           </SQLiteProvider>
