@@ -92,5 +92,40 @@ sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
 # Build Debug APK
 ./gradlew assembleDebug
+
+sudo apt-get update && sudo apt-get install -y adb
+
+# adb pair 10.0.0.178:39471
+
+adb connect 10.0.0.178:39471
+
+# Upgrade ADB to latest version (for wireless pairing support)
+cd /tmp && wget https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+cd /tmp && unzip -q platform-tools-latest-linux.zip
+
+# Install to user directory (no sudo needed)
+mkdir -p ~/.local/bin
+mv /tmp/platform-tools/adb ~/.local/bin/adb
+chmod +x ~/.local/bin/adb
+
+# Add to PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# Verify version (should be 36.0.0+)
+~/.local/bin/adb --version
+
+# Restart ADB server with new version
+~/.local/bin/adb kill-server
+~/.local/bin/adb start-server
+
+# Wireless pairing (requires Android 11+)
+# On phone: Settings → Developer Options → Wireless Debugging → Pair device with pairing code
+~/.local/bin/adb pair 10.0.0.178:39471
+# Enter pairing code when prompted
+
+~/.local/bin/adb connect 10.0.0.178:39471
+~/.local/bin/adb devices
+
+# For future: Can just use 'adb' in new terminal sessions
 ```
 

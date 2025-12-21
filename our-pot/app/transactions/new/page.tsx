@@ -27,10 +27,9 @@ function NewTransactionContent() {
         try {
             const repo = new TransactionRepository(db);
 
-            // Calculate signed amount in cents
-            // Expense = -ve, Deposit = +ve
-            const cents = Math.round(data.amount * 100);
-            const signedAmount = data.type === "EXPENSE" ? -cents : cents;
+            // Convert amount to cents (always positive)
+            // The 'type' field determines the semantic meaning
+            const amountInCents = Math.round(data.amount * 100);
 
             await repo.create({
                 id: generateId(),
@@ -38,7 +37,7 @@ function NewTransactionContent() {
                 member_id: data.member_id,
                 category_id: data.category_id === 'uncategorized' ? undefined : data.category_id,
                 type: data.type,
-                amount: signedAmount,
+                amount: amountInCents,
                 merchant: data.merchant,
                 description: data.description,
                 date: data.date,

@@ -57,7 +57,7 @@ export class ChangeSetRepository extends BaseRepository {
     async getApprovedByAccount(limit: number = 20): Promise<ChangeSet[]> {
         // Audit trail mainly
         return this.executeQuery<ChangeSet>(
-            `SELECT * FROM changesets WHERE status = 'approved' OR status = 'executed' ORDER BY reviewed_at DESC LIMIT ?`,
+            `SELECT * FROM changesets WHERE status = 'approved' ORDER BY reviewed_at DESC LIMIT ?`,
             [limit]
         );
     }
@@ -79,7 +79,7 @@ export class ChangeSetRepository extends BaseRepository {
                 // or instantiate other repositories with the same connection.
 
                 switch (req.operation_type) {
-                    case 'CREATE':
+                    case 'create':
                         const columns = Object.keys(data).join(', ');
                         const placeholders = Object.keys(data).map(() => '?').join(', ');
                         const values = Object.values(data);
@@ -89,7 +89,7 @@ export class ChangeSetRepository extends BaseRepository {
                         );
                         break;
 
-                    case 'UPDATE':
+                    case 'update':
                         const updateFields = Object.keys(data).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
                         const updateValues = Object.keys(data).filter(k => k !== 'id').map(k => data[k]);
                         await this.executeNonQuery(
@@ -98,7 +98,7 @@ export class ChangeSetRepository extends BaseRepository {
                         );
                         break;
 
-                    case 'DELETE':
+                    case 'delete':
                         // Assuming physical delete or manual soft delete logic is in 'proposed_data' or we imply soft delete
                         // Let's assume soft delete for now if table supports it
                         const now = new Date().toISOString();
@@ -110,22 +110,23 @@ export class ChangeSetRepository extends BaseRepository {
                 }
             }
 
-            await this.executeNonQuery(`UPDATE changesets SET status = 'executed' WHERE id = ?`, [id]);
+            await this.executeNonQuery(`UPDATE changesets SET status = 'approved' WHERE id = ?`, [id]);
             await this.commitTransaction();
 
         } catch (error) {
             console.error(`Failed to apply changeset ${id}`, error);
             await this.rollbackTransaction();
-            await this.executeNonQuery(`UPDATE changesets SET status = 'failed' WHERE id = ?`, [id]);
+            await this.executeNonQuery(`UPDATE changesets SET status = 'execution_failed' WHERE id = ?`, [id]);
             throw error;
         }
     }
 
     private getTableName(entityType: string): string {
         switch (entityType) {
-            case 'TRANSACTION': return 'transactions';
-            case 'CATEGORY': return 'categories';
-            case 'MEMBER': return 'members';
+            case 'transaction': return 'transactions';
+            case 'category': return 'categories';
+            case 'member': return 'members';
+            case 'account': return 'accounts';
             default: throw new Error(`Unknown entity type: ${entityType}`);
         }
     }

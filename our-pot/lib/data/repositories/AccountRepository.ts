@@ -54,16 +54,22 @@ export class AccountRepository extends BaseRepository {
 
     // Force recalculate balance from transactions
     async reconcileBalance(id: string): Promise<void> {
+        const now = new Date().toISOString();
         await this.executeNonQuery(`
-      UPDATE accounts 
-      SET balance = (
-        SELECT COALESCE(SUM(amount), 0)
-        FROM transactions 
-        WHERE account_id = ? 
-        AND deleted_at IS NULL
-      ),
-      updated_at = ?
-      WHERE id = ?
-    `, [id, new Date().toISOString(), id]);
+            UPDATE accounts
+            SET balance = (
+                SELECT COALESCE(SUM(
+                    CASE type
+                        WHEN 'DEPOSIT' THEN amount
+                        WHEN 'EXPENSE' THEN -amount
+                    END
+                ), 0)
+                FROM transactions
+                WHERE account_id = ?
+                AND deleted_at IS NULL
+            ),
+            updated_at = ?
+            WHERE id = ?
+        `, [id, now, id]);
     }
 }

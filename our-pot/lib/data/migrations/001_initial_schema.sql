@@ -1,7 +1,4 @@
-// Auto-generated from 001_initial_schema.sql
-// To update: edit the .sql file and run: node sync-sql.js
-
-const schema = `-- Enable foreign keys
+-- Enable foreign keys
 PRAGMA foreign_keys = ON;
 
 -- Accounts Table
@@ -184,6 +181,3 @@ CREATE INDEX IF NOT EXISTS idx_changesets_toolCallId ON changesets(tool_call_id)
 CREATE INDEX IF NOT EXISTS idx_change_requests_changesetId ON change_requests(changeset_id);
 CREATE INDEX IF NOT EXISTS idx_change_requests_executionOrder ON change_requests(changeset_id, execution_order);
 CREATE INDEX IF NOT EXISTS idx_change_requests_entityId ON change_requests(entity_id);
-`;
-
-export default schema;

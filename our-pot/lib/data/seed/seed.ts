@@ -9,7 +9,7 @@ export async function seedData(db: SQLiteDBConnection) {
     const count = accountsResult.values?.[0]?.count || 0;
 
     if (count > 0) {
-        console.log('Data already exists, skipping seed.');
+        console.log('Data already exists, skipping seed');
         return;
     }
 
@@ -48,5 +48,5 @@ export async function seedData(db: SQLiteDBConnection) {
         );
     }
 
-    console.log('Seed complete.');
+    console.log('Seed complete');
 }

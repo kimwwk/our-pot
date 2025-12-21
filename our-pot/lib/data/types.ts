@@ -39,7 +39,7 @@ export interface Transaction {
     member_id: string;
     category_id?: string;
     type: 'EXPENSE' | 'DEPOSIT';
-    amount: number; // Signed integer (relative to pot)
+    amount: number; // Always positive integer in cents (e.g., 4250 = £42.50)
     merchant?: string;
     description: string;
     date: string;
@@ -50,7 +50,7 @@ export interface Transaction {
 
 export interface ChangeSet {
     id: string;
-    status: 'building' | 'pending_approval' | 'approved' | 'rejected' | 'executed' | 'failed';
+    status: 'building' | 'pending_approval' | 'approved' | 'rejected' | 'executing' | 'execution_failed';
     source: 'ai' | 'manual';
     title?: string;
     description?: string;
@@ -63,8 +63,8 @@ export interface ChangeSet {
 export interface ChangeRequest {
     id: string;
     changeset_id: string;
-    operation_type: 'CREATE' | 'UPDATE' | 'DELETE';
-    entity_type: 'TRANSACTION' | 'CATEGORY' | 'MEMBER';
+    operation_type: 'create' | 'update' | 'delete';
+    entity_type: 'transaction' | 'category' | 'member' | 'account';
     entity_id?: string;
     current_data?: string; // JSON
     proposed_data?: string; // JSON

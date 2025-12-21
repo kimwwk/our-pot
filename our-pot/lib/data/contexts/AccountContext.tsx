@@ -29,7 +29,10 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchAccount = async (id?: string) => {
-        if (!db || !isInitialized) return;
+        if (!db || !isInitialized) {
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const repo = new AccountRepository(db);
@@ -73,7 +76,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
         if (isInitialized) {
             fetchAccount();
         }
-    }, [isInitialized]);
+    }, [isInitialized, db]);
 
     const switchAccount = async (id: string) => {
         setIsLoading(true);

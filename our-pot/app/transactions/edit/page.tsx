@@ -53,14 +53,15 @@ function EditTransactionContent() {
         try {
             const repo = new TransactionRepository(db);
 
-            const cents = Math.round(data.amount * 100);
-            const signedAmount = data.type === "EXPENSE" ? -cents : cents;
+            // Convert amount to cents (always positive)
+            // The 'type' field determines the semantic meaning
+            const amountInCents = Math.round(data.amount * 100);
 
             await repo.update(transaction.id, {
                 member_id: data.member_id,
                 category_id: data.category_id === 'uncategorized' ? undefined : data.category_id,
                 type: data.type,
-                amount: signedAmount,
+                amount: amountInCents,
                 merchant: data.merchant,
                 description: data.description,
                 date: data.date,
@@ -92,8 +93,9 @@ function EditTransactionContent() {
     if (!transaction) return null;
 
     // Convert Transaction to FormData
+    // Amount is always positive in database (cents)
     const initialData: Partial<TransactionFormData> = {
-        amount: Math.abs(transaction.amount / 100),
+        amount: transaction.amount / 100,
         type: transaction.type,
         description: transaction.description,
         merchant: transaction.merchant,

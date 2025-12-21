@@ -35,7 +35,6 @@ export const SQLiteProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 sqliteRef.current = sqlite;
 
                 if (platform === 'web') {
-                    // Use loader to define custom elements
                     const { defineCustomElements } = await import('jeep-sqlite/loader');
                     defineCustomElements(window);
 
@@ -71,8 +70,7 @@ export const SQLiteProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const { runMigrations } = await import('@/lib/data/migrations/migrate');
                 await runMigrations(database);
 
-                // Initialize seed data if needed (Create default account/kitty)
-                // We'll do this here or inside runMigrations, but separate seed function is usually better
+                // Initialize seed data if needed
                 const { seedData } = await import('@/lib/data/seed/seed');
                 await seedData(database);
 
@@ -82,6 +80,7 @@ export const SQLiteProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             } catch (err: any) {
                 console.error('SQLite initialization failed', err);
                 setError(err);
+                setIsInitialized(true); // Set to true even on error so UI can show error state
             }
         };
 
@@ -104,8 +103,8 @@ export const SQLiteProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             {children}
             {isWeb() && (
                 <div style={{ display: 'none' }}>
-                    {/* Placeholder for jeep-sqlite if needed explicitly in JSX, 
-                        but we appended it to body above. 
+                    {/* Placeholder for jeep-sqlite if needed explicitly in JSX,
+                        but we appended it to body above.
                         Some setups prefer <jeep-sqlite /> here if types allow.
                     */}
                 </div>
