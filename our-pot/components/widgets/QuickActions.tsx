@@ -1,44 +1,51 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
-import Link from "next/link";
+import { Plus, ArrowUpRight, Sparkles } from "lucide-react";
 
 interface QuickActionsProps {
     onAddExpense?: () => void;
-    onAddDeposit?: () => void;
+    onContribute?: () => void;
+    onAskAgent?: () => void;
 }
 
-export function QuickActions({ onAddExpense, onAddDeposit }: QuickActionsProps) {
+export function QuickActions({ onAddExpense, onContribute, onAskAgent }: QuickActionsProps) {
     return (
-        <div className="grid grid-cols-2 gap-4">
-            {onAddExpense ? (
-                <Button onClick={onAddExpense} className="h-14" variant="default">
-                    <ArrowUpRight className="mr-2 h-5 w-5" />
-                    Add Expense
-                </Button>
-            ) : (
-                <Button asChild className="h-14" variant="default">
-                    <Link href="/transactions/new?type=EXPENSE">
-                        <ArrowUpRight className="mr-2 h-5 w-5" />
-                        Add Expense
-                    </Link>
-                </Button>
-            )}
+        <div className="flex items-start justify-center gap-8 px-4">
+            {/* Expense Button */}
+            <button
+                onClick={onAddExpense}
+                className="flex flex-col items-center gap-2 flex-1 max-w-[100px]"
+                disabled={!onAddExpense}
+            >
+                <div className="h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform shadow-md disabled:opacity-50">
+                    <Plus className="h-6 w-6" />
+                </div>
+                <span className="text-xs font-medium text-center whitespace-nowrap">Expense</span>
+            </button>
 
-            {onAddDeposit ? (
-                <Button onClick={onAddDeposit} className="h-14" variant="outline">
-                    <ArrowDownLeft className="mr-2 h-5 w-5" />
-                    Add Deposit
-                </Button>
-            ) : (
-                <Button asChild className="h-14" variant="outline">
-                    <Link href="/transactions/new?type=DEPOSIT">
-                        <ArrowDownLeft className="mr-2 h-5 w-5" />
-                        Add Deposit
-                    </Link>
-                </Button>
-            )}
+            {/* Contribute Button */}
+            <button
+                onClick={onContribute}
+                className="flex flex-col items-center gap-2 flex-1 max-w-[100px]"
+                disabled={!onContribute}
+            >
+                <div className="h-14 w-14 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center active:scale-95 transition-transform shadow-md disabled:opacity-50">
+                    <ArrowUpRight className="h-6 w-6" />
+                </div>
+                <span className="text-xs font-medium text-center whitespace-nowrap">Contribute</span>
+            </button>
+
+            {/* Ask AI Button */}
+            <button
+                onClick={onAskAgent}
+                className="flex flex-col items-center gap-2 flex-1 max-w-[100px]"
+                disabled={!onAskAgent}
+            >
+                <div className="h-14 w-14 rounded-full border-2 border-border bg-background text-foreground flex items-center justify-center active:scale-95 transition-transform shadow-sm disabled:opacity-50">
+                    <Sparkles className="h-6 w-6" />
+                </div>
+                <span className="text-xs font-medium text-center whitespace-nowrap">Ask AI</span>
+            </button>
         </div>
     );
 }

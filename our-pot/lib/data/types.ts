@@ -3,6 +3,7 @@
 export interface Account {
     id: string;
     name: string;
+    emoji: string; // Visual identifier for pot/account
     currency: string;
     balance: number; // in cents
     created_at: string;
@@ -17,6 +18,7 @@ export interface Member {
     role: 'owner' | 'member';
     is_kitty: boolean | 0 | 1; // SQLite boolean is 0/1
     avatar_url?: string;
+    email?: string; // Contact email for member
     created_at: string;
     updated_at: string;
     deleted_at?: string;
@@ -43,6 +45,7 @@ export interface Transaction {
     merchant?: string;
     description: string;
     date: string;
+    status: 'completed' | 'pending_reimbursement' | 'reimbursed'; // Reimbursement tracking
     created_at: string;
     updated_at: string;
     deleted_at?: string;

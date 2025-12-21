@@ -2,12 +2,30 @@ import { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
 import initialSchema from './001_initial_schema';
+import addTransactionStatus from './002_add_transaction_status';
+import addAccountEmoji from './003_add_account_emoji';
+import addMemberEmail from './004_add_member_email';
 
 export const migrations = [
     {
         version: 1,
         description: 'Initial Schema',
         up: initialSchema
+    },
+    {
+        version: 2,
+        description: 'Add transaction status field',
+        up: addTransactionStatus
+    },
+    {
+        version: 3,
+        description: 'Add account emoji field',
+        up: addAccountEmoji
+    },
+    {
+        version: 4,
+        description: 'Add member email field',
+        up: addMemberEmail
     }
 ];
 

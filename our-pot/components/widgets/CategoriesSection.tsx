@@ -12,14 +12,17 @@ export function CategoriesSection() {
         return (
             <div className="space-y-3">
                 <div className="h-5 w-24 bg-muted animate-pulse rounded" />
-                <div className="flex gap-3 overflow-hidden">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-24 w-24 bg-muted animate-pulse rounded-xl flex-shrink-0" />
+                <div className="grid grid-cols-3 gap-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />
                     ))}
                 </div>
             </div>
         );
     }
+
+    // Show first 6 categories in grid
+    const displayCategories = categories.slice(0, 6);
 
     return (
         <div className="space-y-3">
@@ -28,34 +31,35 @@ export function CategoriesSection() {
                 <Link href="/settings" className="text-sm text-primary">Manage</Link>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-                {categories.map((category) => (
-                    <div
+            <div className="grid grid-cols-3 gap-3">
+                {displayCategories.map((category) => (
+                    <button
                         key={category.id}
-                        className="flex flex-col items-center gap-2 group cursor-pointer flex-shrink-0"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl border bg-card active:scale-95 transition-transform"
+                        style={category.color ? { backgroundColor: `${category.color}10`, borderColor: `${category.color}40` } : undefined}
                     >
-                        <div
-                            className={cn(
-                                "h-16 w-16 rounded-2xl flex items-center justify-center text-2xl shadow-sm border transition-transform group-active:scale-95",
-                                "bg-card hover:bg-muted/50"
-                            )}
-                            style={category.color ? { backgroundColor: `${category.color}20`, color: category.color, borderColor: `${category.color}40` } : undefined}
+                        <span
+                            className="text-3xl"
+                            style={{ color: category.color }}
                         >
                             {category.icon || "📁"}
-                        </div>
-                        <span className="text-xs font-medium text-center max-w-[4rem] truncate">
+                        </span>
+                        <span className="text-xs font-medium text-center truncate w-full">
                             {category.name}
                         </span>
-                    </div>
+                    </button>
                 ))}
 
-                {/* Add Category Button */}
-                <Link href="/settings" className="flex flex-col items-center gap-2 group cursor-pointer flex-shrink-0">
-                    <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground shadow-sm transition-transform group-active:scale-95">
-                        <Plus className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">Add New</span>
-                </Link>
+                {/* Add Category Button - only show if less than 6 categories */}
+                {displayCategories.length < 6 && (
+                    <Link
+                        href="/settings"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/50 border border-dashed border-muted-foreground/30 active:scale-95 transition-transform"
+                    >
+                        <Plus className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">Add New</span>
+                    </Link>
+                )}
             </div>
         </div>
     );

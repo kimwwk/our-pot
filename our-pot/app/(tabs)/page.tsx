@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { KittyBalanceCard } from "@/components/widgets/KittyBalanceCard";
 import { QuickActions } from "@/components/widgets/QuickActions";
 import { AddExpenseSheet } from "@/components/sheets/AddExpenseSheet";
+import { ContributeSheet } from "@/components/sheets/ContributeSheet";
+import { EditExpenseSheet } from "@/components/sheets/EditExpenseSheet";
+import { EditContributionSheet } from "@/components/sheets/EditContributionSheet";
 import { CategoriesSection } from "@/components/widgets/CategoriesSection";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository";
+import { MemberRepository } from "@/lib/data/repositories/MemberRepository";
 import { generateId } from "@/lib/utils/ulid";
 import { toast } from "sonner";
 import { TransactionList } from "@/components/widgets/TransactionList";
@@ -16,34 +20,50 @@ import { useRouter } from "next/navigation";
 
 export default function HomePage() {
     const [showAddExpense, setShowAddExpense] = useState(false);
+    const [showContribute, setShowContribute] = useState(false);
+    const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
     const { db } = useSQLite();
-    const { account } = useAccount();
+    const { account, reloadAccount } = useAccount();
     const { transactions, isLoading, refetch } = useTransactions({ limit: 5 });
     const router = useRouter();
+
+    // Find the transaction type for editing
+    const editingTransaction = useMemo(() => {
+        if (!editingTransactionId) return null;
+        return transactions.find(t => t.id === editingTransactionId);
+    }, [editingTransactionId, transactions]);
 
     const handleAddExpense = async (data: any) => {
         if (!db || !account) return;
 
         try {
-            const repo = new TransactionRepository(db);
+            const transactionRepo = new TransactionRepository(db);
+            const memberRepo = new MemberRepository(db);
+
             // Amount is coming in as float e.g 10.50
             const cents = Math.round(data.amount * 100);
 
-            await repo.create({
+            // Check if member is kitty to determine status
+            const member = await memberRepo.getById(data.memberId);
+            const status = member?.is_kitty ? 'completed' : 'pending_reimbursement';
+
+            await transactionRepo.create({
                 id: generateId(),
                 account_id: account.id,
                 member_id: data.memberId,
                 category_id: data.categoryId,
                 type: "EXPENSE",
-                // Expenses are negative
-                amount: -Math.abs(cents),
+                // Store as positive, trigger will handle sign
+                amount: Math.abs(cents),
                 description: data.description,
                 date: data.date,
+                status: status,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             });
 
             toast.success("Expense added");
+            await reloadAccount();
             refetch(); // Refresh list
         } catch (err) {
             console.error(err);
@@ -51,14 +71,19 @@ export default function HomePage() {
         }
     };
 
+    const handleTransactionUpdated = () => {
+        reloadAccount();
+        refetch();
+    };
+
     return (
         <div className="container mx-auto p-4 space-y-6 pb-24">
-            <h1 className="text-2xl font-bold">Our Pot</h1>
-
             <KittyBalanceCard />
 
             <QuickActions
                 onAddExpense={() => setShowAddExpense(true)}
+                onContribute={() => setShowContribute(true)}
+                onAskAgent={() => router.push('/agent')}
             />
 
             <CategoriesSection />
@@ -71,7 +96,7 @@ export default function HomePage() {
                 <TransactionList
                     transactions={transactions.slice(0, 5)}
                     isLoading={isLoading}
-                    onTransactionClick={(id) => router.push(`/transactions/edit?id=${id}`)}
+                    onTransactionClick={(id) => setEditingTransactionId(id)}
                 />
             </div>
 
@@ -80,6 +105,30 @@ export default function HomePage() {
                 onClose={() => setShowAddExpense(false)}
                 onSubmit={handleAddExpense}
             />
+
+            <ContributeSheet
+                isOpen={showContribute}
+                onClose={() => setShowContribute(false)}
+            />
+
+            {/* Show appropriate edit sheet based on transaction type */}
+            {editingTransaction?.type === "EXPENSE" && (
+                <EditExpenseSheet
+                    transactionId={editingTransactionId}
+                    isOpen={!!editingTransactionId}
+                    onClose={() => setEditingTransactionId(null)}
+                    onSuccess={handleTransactionUpdated}
+                />
+            )}
+
+            {editingTransaction?.type === "DEPOSIT" && (
+                <EditContributionSheet
+                    transactionId={editingTransactionId}
+                    isOpen={!!editingTransactionId}
+                    onClose={() => setEditingTransactionId(null)}
+                    onSuccess={handleTransactionUpdated}
+                />
+            )}
         </div>
     );
 }

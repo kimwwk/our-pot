@@ -64,8 +64,8 @@ export class TransactionRepository extends BaseRepository {
 
     async create(transaction: Transaction): Promise<void> {
         await this.executeNonQuery(
-            `INSERT INTO transactions (id, account_id, member_id, category_id, type, amount, merchant, description, date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [transaction.id, transaction.account_id, transaction.member_id, transaction.category_id, transaction.type, transaction.amount, transaction.merchant, transaction.description, transaction.date, transaction.created_at, transaction.updated_at]
+            `INSERT INTO transactions (id, account_id, member_id, category_id, type, amount, merchant, description, date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [transaction.id, transaction.account_id, transaction.member_id, transaction.category_id, transaction.type, transaction.amount, transaction.merchant, transaction.description, transaction.date, transaction.status, transaction.created_at, transaction.updated_at]
         );
     }
 
@@ -100,12 +100,58 @@ export class TransactionRepository extends BaseRepository {
     async search(accountId: string, searchTerm: string): Promise<Transaction[]> {
         const term = `%${searchTerm}%`;
         return this.executeQuery<Transaction>(
-            `SELECT * FROM transactions 
-       WHERE account_id = ? 
-       AND deleted_at IS NULL 
-       AND (merchant LIKE ? OR description LIKE ?) 
+            `SELECT * FROM transactions
+       WHERE account_id = ?
+       AND deleted_at IS NULL
+       AND (merchant LIKE ? OR description LIKE ?)
        ORDER BY date DESC`,
             [accountId, term, term]
         );
+    }
+
+    // Member-specific methods for reimbursement tracking
+
+    async updateStatus(id: string, status: Transaction['status']): Promise<void> {
+        const now = new Date().toISOString();
+        await this.executeNonQuery(
+            `UPDATE transactions SET status = ?, updated_at = ? WHERE id = ?`,
+            [status, now, id]
+        );
+    }
+
+    async getPendingReimbursementsByMember(memberId: string): Promise<Transaction[]> {
+        return this.executeQuery<Transaction>(
+            `SELECT * FROM transactions
+             WHERE member_id = ?
+             AND status = 'pending_reimbursement'
+             AND deleted_at IS NULL
+             ORDER BY date DESC`,
+            [memberId]
+        );
+    }
+
+    async getContributionsByMember(memberId: string): Promise<number> {
+        const result = await this.executeSingle<{ total: number | null }>(
+            `SELECT COALESCE(SUM(amount), 0) as total
+             FROM transactions
+             WHERE member_id = ?
+             AND type = 'DEPOSIT'
+             AND deleted_at IS NULL`,
+            [memberId]
+        );
+        return result?.total || 0;
+    }
+
+    async getOwedByMember(memberId: string): Promise<number> {
+        const result = await this.executeSingle<{ total: number | null }>(
+            `SELECT COALESCE(SUM(amount), 0) as total
+             FROM transactions
+             WHERE member_id = ?
+             AND type = 'EXPENSE'
+             AND status = 'pending_reimbursement'
+             AND deleted_at IS NULL`,
+            [memberId]
+        );
+        return result?.total || 0;
     }
 }

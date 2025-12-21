@@ -7,6 +7,7 @@ import { Account } from "../types";
 
 interface AccountContextData {
     account: Account | null;
+    accounts: Account[]; // All available accounts for pot switcher
     isLoading: boolean;
     switchAccount: (id: string) => Promise<void>;
     reloadAccount: () => Promise<void>;
@@ -14,6 +15,7 @@ interface AccountContextData {
 
 const AccountContext = createContext<AccountContextData>({
     account: null,
+    accounts: [],
     isLoading: true,
     switchAccount: async () => { },
     reloadAccount: async () => { },
@@ -26,6 +28,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const { db, isInitialized } = useSQLite();
     const [account, setAccount] = useState<Account | null>(null);
+    const [accounts, setAccounts] = useState<Account[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchAccount = async (id?: string) => {
@@ -36,6 +39,11 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
 
         try {
             const repo = new AccountRepository(db);
+
+            // Always fetch all accounts for PotSwitcher
+            const all = await repo.getAll();
+            setAccounts(all);
+
             if (id) {
                 const found = await repo.getById(id);
                 if (found) {
@@ -51,14 +59,12 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
                         setAccount(found);
                     } else {
                         // Saved ID invalid, fallback
-                        const all = await repo.getAll();
                         if (all.length > 0) {
                             setAccount(all[0]);
                             localStorage.setItem("activeAccountId", all[0].id);
                         }
                     }
                 } else {
-                    const all = await repo.getAll();
                     if (all.length > 0) {
                         setAccount(all[0]);
                         localStorage.setItem("activeAccountId", all[0].id);
@@ -92,7 +98,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     return (
-        <AccountContext.Provider value={{ account, isLoading, switchAccount, reloadAccount }}>
+        <AccountContext.Provider value={{ account, accounts, isLoading, switchAccount, reloadAccount }}>
             {children}
         </AccountContext.Provider>
     );
