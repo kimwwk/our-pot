@@ -101,18 +101,19 @@ export function SettingsTab() {
             <h3 className="text-sm font-semibold text-muted-foreground mb-2 px-1">{group.title}</h3>
             <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
               {group.items.map((item, itemIndex) => {
-                const Wrapper = item.toggle ? "div" : "button";
+                const isToggle = 'toggle' in item && item.toggle;
+                const Wrapper = isToggle ? "div" : "button";
                 return (
                   <Wrapper
                     key={item.label}
-                    {...(!item.toggle && {
-                      disabled: item.disabled,
-                      onClick: item.onClick,
+                    {...(!isToggle && {
+                      disabled: 'disabled' in item ? item.disabled : false,
+                      onClick: 'onClick' in item ? item.onClick : undefined,
                     })}
                     className={`w-full flex items-center gap-4 p-4 transition-colors ${
-                      item.disabled
+                      'disabled' in item && item.disabled
                         ? "opacity-50 cursor-not-allowed"
-                        : item.toggle
+                        : isToggle
                         ? ""
                         : "hover:bg-accent/50 active:bg-accent cursor-pointer"
                     } ${itemIndex !== group.items.length - 1 ? "border-b border-border/50" : ""}`}
@@ -122,16 +123,16 @@ export function SettingsTab() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium text-foreground">{item.label}</p>
-                      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                      {'description' in item && item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
                     </div>
-                    {item.toggle ? (
+                    {isToggle && 'enabled' in item && 'onToggle' in item ? (
                       <Switch
                         checked={item.enabled}
                         onCheckedChange={item.onToggle}
-                        disabled={item.disabled}
+                        disabled={'disabled' in item ? (item.disabled as boolean) : false}
                       />
                     ) : (
-                      !item.disabled && <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      !('disabled' in item && item.disabled) && <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Wrapper>
                 );

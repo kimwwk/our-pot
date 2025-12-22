@@ -65,6 +65,8 @@ export function AgentTab() {
     async onToolCall({ toolCall }) {
       // CLIENT-SIDE TOOL EXECUTION
       const { toolName, input: args } = toolCall;
+      // Cast args to any to avoid type errors - tools validate at runtime
+      const typedArgs = args as any;
 
       // Use refs to get current values (avoid stale closures)
       const currentDb = dbRef.current;
@@ -75,7 +77,7 @@ export function AgentTab() {
         hasDb: !!currentDb,
         hasAccount: !!currentAccount,
         isInitialized: currentIsInitialized,
-        args
+        args: typedArgs
       });
 
       if (!currentDb || !currentAccount) {
@@ -112,7 +114,11 @@ export function AgentTab() {
         }
 
         if (toolName === "searchTransactions") {
-          const result = await executeSearchTransactions(currentDb, currentAccount.id, args);
+          const result = await executeSearchTransactions(
+            currentDb,
+            currentAccount.id,
+            typedArgs
+          );
           addToolOutput({
             tool: toolName,
             toolCallId: toolCall.toolCallId,
@@ -130,7 +136,7 @@ export function AgentTab() {
               addChangeRequest: changeSetContextRef.current.addChangeRequest,
               removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
             },
-            args
+            typedArgs
           );
           addToolOutput({
             tool: toolName,
@@ -148,7 +154,7 @@ export function AgentTab() {
               addChangeRequest: changeSetContextRef.current.addChangeRequest,
               removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
             },
-            args
+            typedArgs
           );
           addToolOutput({
             tool: toolName,
@@ -166,7 +172,7 @@ export function AgentTab() {
               addChangeRequest: changeSetContextRef.current.addChangeRequest,
               removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
             },
-            args
+            typedArgs
           );
           addToolOutput({
             tool: toolName,
@@ -184,7 +190,7 @@ export function AgentTab() {
               addChangeRequest: changeSetContextRef.current.addChangeRequest,
               removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
             },
-            args
+            typedArgs
           );
           addToolOutput({
             tool: toolName,
@@ -202,8 +208,9 @@ export function AgentTab() {
               clearBuffer: changeSetContextRef.current.clearBuffer,
               getBufferAsArray: changeSetContextRef.current.getBufferAsArray,
             },
-            args,
-            toolCall.toolCallId
+            typedArgs,
+            toolCall.toolCallId,
+            dbRef.current // Pass database instance
           );
 
           if (!result.success) {

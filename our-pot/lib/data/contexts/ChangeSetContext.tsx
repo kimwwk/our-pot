@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { ulid } from "ulid";
+import type { SQLiteDBConnection } from "@capacitor-community/sqlite";
+import { ChangeSetRepository } from "../repositories/ChangeSetRepository";
+import type { ChangeSet as DbChangeSet, ChangeRequest as DbChangeRequest } from "../types";
 
 // ChangeRequest structure for the keyed buffer
 export interface ChangeRequest {
@@ -38,7 +41,7 @@ export interface ChangeSetContextData {
   addChangeRequest: (key: string, request: Omit<ChangeRequest, "id" | "createdAt" | "executionOrder">) => void;
   removeChangeRequest: (key: string) => void;
   clearBuffer: () => void;
-  transitionToPendingApproval: (metadata: ChangeSetMetadata) => string; // Returns changeset ID
+  transitionToPendingApproval: (metadata: ChangeSetMetadata, db: SQLiteDBConnection) => Promise<string>; // Returns changeset ID
   transitionToBuilding: () => void;
   transitionToApproved: () => void;
   transitionToRejected: (reason?: string) => void;
@@ -56,7 +59,7 @@ const ChangeSetContext = createContext<ChangeSetContextData>({
   addChangeRequest: () => {},
   removeChangeRequest: () => {},
   clearBuffer: () => {},
-  transitionToPendingApproval: () => "",
+  transitionToPendingApproval: async () => "",
   transitionToBuilding: () => {},
   transitionToApproved: () => {},
   transitionToRejected: () => {},
@@ -124,15 +127,47 @@ export const ChangeSetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   /**
    * Transition from building to pending_approval
-   * Snapshots the keyed buffer and prepares for user review
+   * Snapshots the keyed buffer, persists to database, and prepares for user review
    */
-  const transitionToPendingApproval = useCallback((meta: ChangeSetMetadata) => {
+  const transitionToPendingApproval = useCallback(async (meta: ChangeSetMetadata, db: SQLiteDBConnection) => {
     const changesetId = ulid();
+    const requests = Array.from(keyedBuffer.values()).sort((a, b) => a.executionOrder - b.executionOrder);
+
+    // Create changeset object for database
+    const changeset: DbChangeSet = {
+      id: changesetId,
+      status: 'pending_approval',
+      source: 'ai',
+      title: meta.title,
+      description: meta.description,
+      tool_call_id: meta.toolCallId,
+      proposed_at: new Date().toISOString(),
+    };
+
+    // Convert frontend ChangeRequest format to database format
+    const dbRequests: DbChangeRequest[] = requests.map(req => ({
+      id: req.id,
+      changeset_id: changesetId,
+      operation_type: req.operationType,
+      entity_type: req.entityType,
+      entity_id: req.entityId || undefined,
+      current_data: req.currentData || undefined,
+      proposed_data: req.proposedData || undefined,
+      execution_order: req.executionOrder,
+      created_at: req.createdAt,
+    }));
+
+    // Persist to database
+    const repo = new ChangeSetRepository(db);
+    await repo.create(changeset, dbRequests);
+
+    // Update state
     setCurrentChangeSetId(changesetId);
     setMetadata(meta);
     setStatus("pending_approval");
+
     return changesetId;
-  }, []);
+  }, [keyedBuffer]);
 
   /**
    * Transition from pending_approval back to building (iterative refinement)

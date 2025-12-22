@@ -398,7 +398,7 @@ export interface ChangeSetConfirmationActions {
     title: string;
     description?: string;
     toolCallId?: string;
-  }) => string;
+  }, db: any) => Promise<string>;
   clearBuffer: () => void;
   getBufferAsArray: () => any[];
 }
@@ -409,7 +409,8 @@ export async function executeConfirmChangeSet(
     title: string;
     description?: string;
   },
-  toolCallId?: string
+  toolCallId: string | undefined,
+  db: any // Database instance
 ) {
   // Check if there are changes
   const buffer = changeSetActions.getBufferAsArray();
@@ -421,20 +422,38 @@ export async function executeConfirmChangeSet(
     };
   }
 
-  // Transition to pending_approval
-  const changesetId = changeSetActions.transitionToPendingApproval({
-    title: params.title,
-    description: params.description,
-    toolCallId: toolCallId,
-  });
+  if (!db) {
+    return {
+      success: false,
+      error: "Database not available. Cannot persist changeset.",
+    };
+  }
 
-  return {
-    success: true,
-    message: "Changeset submitted for review. Waiting for user approval...",
-    changesetId,
-    changeCount: buffer.length,
-    status: "pending_approval",
-  };
+  try {
+    // Transition to pending_approval AND persist to database
+    const changesetId = await changeSetActions.transitionToPendingApproval(
+      {
+        title: params.title,
+        description: params.description,
+        toolCallId: toolCallId,
+      },
+      db
+    );
+
+    return {
+      success: true,
+      message: "Changeset submitted for review. Waiting for user approval...",
+      changesetId,
+      changeCount: buffer.length,
+      status: "pending_approval",
+    };
+  } catch (error) {
+    console.error("Failed to persist changeset:", error);
+    return {
+      success: false,
+      error: `Failed to persist changeset: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 }
 
 export async function executeResetChangeSet(changeSetActions: ChangeSetConfirmationActions) {

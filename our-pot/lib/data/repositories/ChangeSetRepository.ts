@@ -5,23 +5,28 @@ export class ChangeSetRepository extends BaseRepository {
 
     async create(changeset: ChangeSet, requests: ChangeRequest[]): Promise<void> {
         try {
-            await this.beginTransaction();
+            // Use executeSet for batch operations instead of manual transaction management
+            // Capacitor SQLite handles atomicity internally for executeSet
+            const statements: { statement: string; values: any[] }[] = [];
 
-            await this.executeNonQuery(
-                `INSERT INTO changesets (id, status, source, title, description, tool_call_id, proposed_at, reviewed_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [changeset.id, changeset.status, changeset.source, changeset.title, changeset.description, changeset.tool_call_id, changeset.proposed_at, changeset.reviewed_at, changeset.rejection_reason]
-            );
+            // Insert changeset
+            statements.push({
+                statement: `INSERT INTO changesets (id, status, source, title, description, tool_call_id, proposed_at, reviewed_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                values: [changeset.id, changeset.status, changeset.source, changeset.title, changeset.description, changeset.tool_call_id, changeset.proposed_at, changeset.reviewed_at, changeset.rejection_reason]
+            });
 
+            // Insert change requests
             for (const req of requests) {
-                await this.executeNonQuery(
-                    `INSERT INTO change_requests (id, changeset_id, operation_type, entity_type, entity_id, current_data, proposed_data, execution_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [req.id, req.changeset_id, req.operation_type, req.entity_type, req.entity_id, req.current_data, req.proposed_data, req.execution_order, req.created_at]
-                );
+                statements.push({
+                    statement: `INSERT INTO change_requests (id, changeset_id, operation_type, entity_type, entity_id, current_data, proposed_data, execution_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    values: [req.id, req.changeset_id, req.operation_type, req.entity_type, req.entity_id, req.current_data, req.proposed_data, req.execution_order, req.created_at]
+                });
             }
 
-            await this.commitTransaction();
+            // Execute as a batch - Capacitor SQLite handles this atomically
+            await this.db.executeSet(statements);
         } catch (error) {
-            await this.rollbackTransaction();
+            console.error('Failed to create changeset:', error);
             throw error;
         }
     }
@@ -65,58 +70,68 @@ export class ChangeSetRepository extends BaseRepository {
     // Atomic Application of Changeset
     async applyChangeSet(id: string): Promise<void> {
         const requests = await this.getRequests(id);
-        if (!requests || requests.length === 0) return;
+        if (!requests || requests.length === 0) {
+            throw new Error(`No change requests found for changeset ${id}. The changeset may not have been persisted to the database.`);
+        }
 
         try {
-            await this.beginTransaction();
+            // Build all SQL statements for batch execution
+            const statements: { statement: string; values: any[] }[] = [];
 
             for (const req of requests) {
                 const data = req.proposed_data ? JSON.parse(req.proposed_data) : {};
-
-                // This is a naive implementation; 
-                // In a real app, we might check if entity_type allows this operation or match repository
-                // Alternatively, since this IS the repository layer, we can execute SQL directly 
-                // or instantiate other repositories with the same connection.
 
                 switch (req.operation_type) {
                     case 'create':
                         const columns = Object.keys(data).join(', ');
                         const placeholders = Object.keys(data).map(() => '?').join(', ');
                         const values = Object.values(data);
-                        await this.executeNonQuery(
-                            `INSERT INTO ${this.getTableName(req.entity_type)} (${columns}) VALUES (${placeholders})`,
-                            values
-                        );
+                        statements.push({
+                            statement: `INSERT INTO ${this.getTableName(req.entity_type)} (${columns}) VALUES (${placeholders})`,
+                            values: values
+                        });
                         break;
 
                     case 'update':
                         const updateFields = Object.keys(data).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
                         const updateValues = Object.keys(data).filter(k => k !== 'id').map(k => data[k]);
-                        await this.executeNonQuery(
-                            `UPDATE ${this.getTableName(req.entity_type)} SET ${updateFields} WHERE id = ?`,
-                            [...updateValues, req.entity_id]
-                        );
+                        statements.push({
+                            statement: `UPDATE ${this.getTableName(req.entity_type)} SET ${updateFields} WHERE id = ?`,
+                            values: [...updateValues, req.entity_id]
+                        });
                         break;
 
                     case 'delete':
-                        // Assuming physical delete or manual soft delete logic is in 'proposed_data' or we imply soft delete
-                        // Let's assume soft delete for now if table supports it
+                        // Soft delete
                         const now = new Date().toISOString();
-                        await this.executeNonQuery(
-                            `UPDATE ${this.getTableName(req.entity_type)} SET deleted_at = ? WHERE id = ?`,
-                            [now, req.entity_id]
-                        );
+                        statements.push({
+                            statement: `UPDATE ${this.getTableName(req.entity_type)} SET deleted_at = ? WHERE id = ?`,
+                            values: [now, req.entity_id]
+                        });
                         break;
                 }
             }
 
-            await this.executeNonQuery(`UPDATE changesets SET status = 'approved' WHERE id = ?`, [id]);
-            await this.commitTransaction();
+            // Update changeset status to approved
+            statements.push({
+                statement: `UPDATE changesets SET status = 'approved' WHERE id = ?`,
+                values: [id]
+            });
+
+            // Execute all statements atomically using executeSet
+            // Capacitor SQLite handles transaction management internally
+            await this.db.executeSet(statements);
 
         } catch (error) {
             console.error(`Failed to apply changeset ${id}`, error);
-            await this.rollbackTransaction();
-            await this.executeNonQuery(`UPDATE changesets SET status = 'execution_failed' WHERE id = ?`, [id]);
+
+            // Try to mark as failed
+            try {
+                await this.executeNonQuery(`UPDATE changesets SET status = 'execution_failed' WHERE id = ?`, [id]);
+            } catch (updateError) {
+                console.error(`Failed to update changeset status to execution_failed:`, updateError);
+            }
+
             throw error;
         }
     }

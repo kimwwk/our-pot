@@ -127,7 +127,7 @@ export function validateTransactionProposal(data: unknown): {
     if (error instanceof z.ZodError) {
       return {
         valid: false,
-        errors: error.errors.map((e) => ({
+        errors: error.issues.map((e) => ({
           error: "SCHEMA_ERROR",
           field: e.path.join("."),
           message: e.message,
@@ -170,7 +170,7 @@ export function validateCategoryProposal(data: unknown): {
     if (error instanceof z.ZodError) {
       return {
         valid: false,
-        errors: error.errors.map((e) => ({
+        errors: error.issues.map((e) => ({
           error: "SCHEMA_ERROR",
           field: e.path.join("."),
           message: e.message,

@@ -37,15 +37,31 @@ export class BaseRepository {
     }
 
     // Transaction helpers
+    // Use run() instead of execute() to avoid conflicts with Capacitor SQLite's internal transaction management
     public async beginTransaction() {
-        await this.db.execute('BEGIN TRANSACTION');
+        try {
+            await this.db.run('BEGIN TRANSACTION');
+        } catch (error) {
+            console.error('Failed to begin transaction:', error);
+            throw error;
+        }
     }
 
     public async commitTransaction() {
-        await this.db.execute('COMMIT');
+        try {
+            await this.db.run('COMMIT');
+        } catch (error) {
+            console.error('Failed to commit transaction:', error);
+            throw error;
+        }
     }
 
     public async rollbackTransaction() {
-        await this.db.execute('ROLLBACK');
+        try {
+            await this.db.run('ROLLBACK');
+        } catch (error) {
+            // Don't throw on rollback failure - we're already in error handling
+            console.error('Failed to rollback transaction:', error);
+        }
     }
 }

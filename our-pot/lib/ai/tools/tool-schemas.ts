@@ -38,15 +38,17 @@ export const searchTransactionsTool = tool({
 // ============================================================================
 
 export const createTransactionChangeRequestTool = tool({
-  description: `Propose creating a new transaction (requires user approval).
+  description: `Propose creating a NEW transaction (requires user approval).
+
+CRITICAL: This tool is ONLY for creating NEW transactions. Do NOT provide entityId unless you want to update a previous proposal in the same changeset.
 
 Amount handling: Provide amount as decimal (e.g., 42.50 for £42.50). The system will convert to pence automatically.
 
-Upsert behavior: If you provide an entityId that already exists in the current changeset, this will UPDATE that proposal instead of creating a duplicate.
+Upsert behavior within changeset: If you already proposed a transaction in THIS changeset and want to modify it, provide the same entityId. Otherwise, leave entityId EMPTY.
 
 Action: Use "DISCARD" to remove a previously proposed transaction from the changeset.`,
   inputSchema: z.object({
-    entityId: z.string().optional().describe("Unique ID for this change request. Provide same ID to update (upsert). Leave empty for new transactions."),
+    entityId: z.string().optional().describe("DO NOT PROVIDE for new transactions. Only provide if modifying a previous proposal in the current changeset. System generates IDs automatically."),
     type: z.enum(["EXPENSE", "DEPOSIT"]).describe("Transaction type: EXPENSE (money out) or DEPOSIT (money in)"),
     amount: z.number().positive().describe("Amount in currency format (e.g., 42.50 for £42.50). Must be positive with max 2 decimals"),
     merchant: z.string().optional().describe("Merchant or vendor name"),

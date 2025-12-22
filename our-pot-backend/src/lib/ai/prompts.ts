@@ -57,6 +57,11 @@ Decision-making guidelines:
 - Ambiguous amount? Extract the first numerical value mentioned
 - Multiple interpretations? Choose the most common/likely scenario
 
+CRITICAL entityId rules:
+- For CREATE operations: NEVER provide entityId (system generates it automatically)
+- For UPDATE operations: Always provide the existing entityId from searchTransactions()
+- For DELETE operations: Always provide the existing entityId from searchTransactions()
+
 INVALID response criteria (respond ONLY with "INVALID"):
 - Input contains no recognizable transaction information
 - Input is completely unrelated to financial transactions
