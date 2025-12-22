@@ -89,13 +89,7 @@ export function SettingsTab() {
 
   return (
     <>
-      <div className="p-4 space-y-6 pb-24">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-sm text-muted-foreground">Manage {account.name} preferences</p>
-        </div>
-
+      <div className="p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
         {/* Settings groups */}
         {settingGroups.map((group, groupIndex) => (
           <motion.div
@@ -106,36 +100,42 @@ export function SettingsTab() {
           >
             <h3 className="text-sm font-semibold text-muted-foreground mb-2 px-1">{group.title}</h3>
             <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
-              {group.items.map((item, itemIndex) => (
-                <button
-                  key={item.label}
-                  disabled={item.disabled}
-                  onClick={item.onClick || item.onToggle}
-                  className={`w-full flex items-center gap-4 p-4 transition-colors ${
-                    item.disabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-accent/50 active:bg-accent"
-                  } ${itemIndex !== group.items.length - 1 ? "border-b border-border/50" : ""}`}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                    <item.icon className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-foreground">{item.label}</p>
-                    {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                  </div>
-                  {item.toggle ? (
-                    <Switch
-                      checked={item.enabled}
-                      onCheckedChange={item.onToggle}
-                      disabled={item.disabled}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    !item.disabled && <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-              ))}
+              {group.items.map((item, itemIndex) => {
+                const Wrapper = item.toggle ? "div" : "button";
+                return (
+                  <Wrapper
+                    key={item.label}
+                    {...(!item.toggle && {
+                      disabled: item.disabled,
+                      onClick: item.onClick,
+                    })}
+                    className={`w-full flex items-center gap-4 p-4 transition-colors ${
+                      item.disabled
+                        ? "opacity-50 cursor-not-allowed"
+                        : item.toggle
+                        ? ""
+                        : "hover:bg-accent/50 active:bg-accent cursor-pointer"
+                    } ${itemIndex !== group.items.length - 1 ? "border-b border-border/50" : ""}`}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                      <item.icon className="h-5 w-5 text-foreground" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-foreground">{item.label}</p>
+                      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                    </div>
+                    {item.toggle ? (
+                      <Switch
+                        checked={item.enabled}
+                        onCheckedChange={item.onToggle}
+                        disabled={item.disabled}
+                      />
+                    ) : (
+                      !item.disabled && <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Wrapper>
+                );
+              })}
             </div>
           </motion.div>
         ))}

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingDown, Calendar, Sparkles } from "lucide-react";
+import { EmptyState } from "@/components/common/empty-state";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 
 export default function AnalyticsPage() {
@@ -23,13 +24,7 @@ export default function AnalyticsPage() {
   const totalSpent = 0;
 
   return (
-    <div className="p-4 space-y-6 pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-        <p className="text-sm text-muted-foreground">{account.name} spending overview</p>
-      </div>
-
+    <div className="p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
       {/* Period selector */}
       <div className="flex gap-2">
         {["Week", "Month", "Year"].map((period, i) => (
@@ -45,21 +40,11 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Empty state */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-card p-8 border border-border/50 text-center"
-      >
-        <div className="flex justify-center mb-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-            <Sparkles className="h-8 w-8 text-muted-foreground" />
-          </div>
-        </div>
-        <h3 className="font-semibold text-foreground mb-2">No Data Yet</h3>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          Start tracking expenses to see analytics and insights about your spending patterns.
-        </p>
-      </motion.div>
+      <EmptyState
+        icon={Sparkles}
+        title="No Data Yet"
+        description="Start tracking expenses to see analytics and insights about your spending patterns."
+      />
 
       {/* Overview card skeleton (for future) */}
       <motion.div

@@ -5,7 +5,8 @@ import { Camera, ChevronDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { BaseSheet } from "@/components/common/base-sheet"
+import { CurrencyInput } from "@/components/common/currency-input"
 import { useCategories } from "@/lib/data/hooks/useCategories"
 import { useMembers } from "@/lib/data/hooks/useMembers"
 import { useAccount } from "@/lib/data/contexts/AccountContext"
@@ -29,7 +30,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
     const { account } = useAccount();
 
     const [description, setDescription] = useState("")
-    const [amount, setAmount] = useState("")
+    const [amountInCents, setAmountInCents] = useState(0)
     const [selectedCategory, setSelectedCategory] = useState<string>("")
     const [memberId, setMemberId] = useState<string>("") // defaulting to empty, user must pick or we logic it
     const [showCategoryPicker, setShowCategoryPicker] = useState(false)
@@ -52,7 +53,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
     const isKitty = currentPayer?.is_kitty;
 
     const handleSubmit = () => {
-        if (description && amount && selectedCategory) {
+        if (description && amountInCents > 0 && selectedCategory) {
             // Default to kitty if no member selected (shouldn't happen if we default)
             const finalMemberId = memberId || kittyMember?.id;
 
@@ -63,7 +64,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
 
             onSubmit({
                 description,
-                amount: Number.parseFloat(amount),
+                amount: amountInCents / 100, // Convert cents back to decimal for repository
                 categoryId: selectedCategory,
                 memberId: finalMemberId,
                 date: new Date().toISOString().split('T')[0]
@@ -71,7 +72,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
 
             // Reset
             setDescription("")
-            setAmount("")
+            setAmountInCents(0)
             setSelectedCategory("")
             setMemberId("") // Will default back to kitty roughly
             onClose()
@@ -84,33 +85,13 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
     }
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
-                <div className="flex justify-center pt-1 pb-3">
-                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-                </div>
-
-                <SheetHeader className="px-1 pb-4">
-                    <SheetTitle>Add Expense</SheetTitle>
-                </SheetHeader>
-
-                <div className="px-1 pb-6 space-y-5 mt-2">
-                    {/* Amount input */}
-                    <div className="text-center py-3">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Amount</p>
-                        <div className="flex items-center justify-center gap-1">
-                            <span className="text-3xl font-semibold text-foreground">
-                                {account?.currency === 'USD' ? '$' : '£'}
-                            </span>
-                            <Input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0.00"
-                                className="text-3xl font-semibold text-center border-none bg-transparent w-32 p-0 focus-visible:ring-0 shadow-none"
-                            />
-                        </div>
-                    </div>
+        <BaseSheet isOpen={isOpen} onClose={onClose} title="Add Expense">
+            {/* Amount input */}
+            <CurrencyInput
+                value={amountInCents}
+                onChange={setAmountInCents}
+                currency={account?.currency}
+            />
 
                     {/* Description */}
                     <div>
@@ -253,23 +234,19 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
                     </div>
 
                     {/* Receipt upload button (Mock) */}
-                    <Button variant="outline" className="w-full h-11 rounded-lg bg-transparent text-sm border-dashed text-muted-foreground">
+                    {/* <Button variant="outline" className="w-full h-11 rounded-lg bg-transparent text-sm border-dashed text-muted-foreground">
                         <Camera className="h-4 w-4 mr-2" />
                         Attach Receipt (optional)
-                    </Button>
+                    </Button> */}
 
-                    {/* Submit */}
-                    <Button
-                        className="w-full h-12 rounded-xl text-sm font-medium shadow-lg shadow-primary/20"
-                        onClick={handleSubmit}
-                        disabled={!description || !amount || !selectedCategory}
-                    >
-                        Add Expense
-                    </Button>
-                </div>
-
-                <div className="pb-6" />
-            </SheetContent>
-        </Sheet>
+            {/* Submit */}
+            <Button
+                className="w-full h-12 rounded-xl text-sm font-medium shadow-lg shadow-primary/20"
+                onClick={handleSubmit}
+                disabled={!description || amountInCents === 0 || !selectedCategory}
+            >
+                Add Expense
+            </Button>
+        </BaseSheet>
     )
 }

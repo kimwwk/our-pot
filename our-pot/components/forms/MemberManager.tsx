@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { MemberRepository } from "@/lib/data/repositories/MemberRepository";
+import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository";
 import { generateId } from "@/lib/utils/ulid";
 import { toast } from "sonner";
 import {
@@ -15,6 +16,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogDescription,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import {
     Form,
@@ -26,9 +29,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, AlertCircle, MoreHorizontal } from "lucide-react";
 import { Member } from "@/lib/data/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MemberDetailSheet } from "@/components/sheets/MemberDetailSheet";
 
 const memberSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -44,6 +54,8 @@ interface MemberManagerProps {
 
 export function MemberManager({ onUpdate, members }: MemberManagerProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [deletingMember, setDeletingMember] = useState<Member | null>(null);
+    const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const { db } = useSQLite();
     const { account } = useAccount();
 
@@ -78,6 +90,39 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
         } catch (e) {
             console.error(e);
             toast.error("Failed to add member");
+        }
+    };
+
+    const handleDeleteMember = async () => {
+        if (!db || !deletingMember) return;
+
+        // Prevent deleting kitty member
+        if (deletingMember.is_kitty) {
+            toast.error("Cannot delete the kitty member");
+            setDeletingMember(null);
+            return;
+        }
+
+        try {
+            // Check if member has transactions
+            const transactionRepo = new TransactionRepository(db);
+            const memberTransactions = await transactionRepo.getAllByAccount(account?.id || '', { memberId: deletingMember.id });
+
+            if (memberTransactions.length > 0) {
+                toast.error(`Cannot delete member with ${memberTransactions.length} transaction(s)`);
+                setDeletingMember(null);
+                return;
+            }
+
+            const repo = new MemberRepository(db);
+            await repo.softDelete(deletingMember.id);
+
+            toast.success(`${deletingMember.name} removed`);
+            setDeletingMember(null);
+            onUpdate?.();
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to delete member");
         }
     };
 
@@ -117,17 +162,73 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
                 </Dialog>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3">
                 {members.filter(m => !m.is_kitty).map(member => (
-                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-md border bg-card">
-                        <Avatar>
+                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <Avatar className="h-10 w-10">
                             <AvatarImage src={member.avatar_url} />
                             <AvatarFallback>{member.name[0]}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{member.name}</span>
+                        <span className="font-medium flex-1">{member.name}</span>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setSelectedMember(member)}>
+                                    View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setDeletingMember(member)}
+                                >
+                                    Delete Member
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 ))}
             </div>
+
+            {/* Member Detail Sheet */}
+            <MemberDetailSheet
+                member={selectedMember}
+                isOpen={!!selectedMember}
+                onClose={() => setSelectedMember(null)}
+            />
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!deletingMember} onOpenChange={() => setDeletingMember(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Member?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to remove <strong>{deletingMember?.name}</strong>?
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3 flex gap-2">
+                        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                            Members with existing transactions cannot be deleted.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeletingMember(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteMember}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { TransactionList } from "@/components/widgets/TransactionList";
+import { MonthSlider } from "@/components/features/transactions/MonthSlider";
 import { useTransactions } from "@/lib/data/hooks/useTransactions";
-import { QuickActions } from "@/components/widgets/QuickActions";
 import { AddExpenseSheet } from "@/components/sheets/AddExpenseSheet";
 import { ContributeSheet } from "@/components/sheets/ContributeSheet";
 import { EditExpenseSheet } from "@/components/sheets/EditExpenseSheet";
@@ -16,7 +16,8 @@ import { generateId } from "@/lib/utils/ulid";
 import { toast } from "sonner";
 
 export default function TransactionsPage() {
-    const { transactions, isLoading, refetch } = useTransactions({ limit: 50 });
+    const { transactions, isLoading, refetch } = useTransactions({ limit: 200 });
+    const [selectedMonth, setSelectedMonth] = useState(new Date());
     const { db } = useSQLite();
     const { account, reloadAccount } = useAccount();
 
@@ -71,17 +72,26 @@ export default function TransactionsPage() {
         refetch();
     };
 
-    return (
-        <div className="container mx-auto p-4 space-y-6 pb-24">
-            <h1 className="text-2xl font-bold">Transactions</h1>
+    // Filter transactions by selected month
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            const transactionDate = new Date(t.date);
+            return (
+                transactionDate.getFullYear() === selectedMonth.getFullYear() &&
+                transactionDate.getMonth() === selectedMonth.getMonth()
+            );
+        });
+    }, [transactions, selectedMonth]);
 
-            <QuickActions
-                onAddExpense={() => setShowAddExpense(true)}
-                onContribute={() => setShowContribute(true)}
+    return (
+        <div className="container mx-auto p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
+            <MonthSlider
+                selectedMonth={selectedMonth}
+                onMonthChange={setSelectedMonth}
             />
 
             <TransactionList
-                transactions={transactions}
+                transactions={filteredTransactions}
                 isLoading={isLoading}
                 onTransactionClick={(id) => setEditingTransactionId(id)}
             />

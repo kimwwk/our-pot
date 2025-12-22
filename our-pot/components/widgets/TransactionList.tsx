@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { Transaction, Category, Member } from "@/lib/data/types";
 import { TransactionItem } from "./TransactionItem";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/common/empty-state";
 import { formatDate } from "@/lib/utils/format";
-import { Search } from "lucide-react";
+import { Search, Receipt } from "lucide-react";
 import { useCategories } from "@/lib/data/hooks/useCategories";
 import { useMembers } from "@/lib/data/hooks/useMembers";
 
@@ -13,9 +14,17 @@ interface TransactionListProps {
     transactions: Transaction[];
     isLoading: boolean;
     onTransactionClick?: (id: string) => void;
+    showSearchBar?: boolean;
+    showFilters?: boolean;
 }
 
-export function TransactionList({ transactions, isLoading, onTransactionClick }: TransactionListProps) {
+export function TransactionList({
+    transactions,
+    isLoading,
+    onTransactionClick,
+    showSearchBar = true,
+    showFilters = true
+}: TransactionListProps) {
     const { categories } = useCategories();
     const { members } = useMembers();
     const [searchTerm, setSearchTerm] = useState("");
@@ -63,24 +72,28 @@ export function TransactionList({ transactions, isLoading, onTransactionClick }:
 
     if (transactions.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <p>No transactions found.</p>
-            </div>
+            <EmptyState
+                icon={Receipt}
+                title="No Transactions Yet"
+                description="Start tracking expenses by adding your first transaction"
+            />
         );
     }
 
     return (
         <div className="space-y-4">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search transactions..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
+            {showSearchBar && (
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search transactions..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            )}
 
             <div className="space-y-6">
                 {sortedDates.map(date => (

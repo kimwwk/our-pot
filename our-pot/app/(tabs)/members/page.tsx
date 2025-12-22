@@ -39,15 +39,9 @@ export default function MembersPage() {
     }
 
     return (
-        <div className="space-y-6 pb-24">
+        <div className="pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24 px-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold">Members</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        {humanMembers.length} members in {account?.name || "Our Pot"}
-                    </p>
-                </div>
+            <div className="flex items-center justify-end">
                 <Button
                     size="sm"
                     className="rounded-lg h-9 px-3 text-xs"

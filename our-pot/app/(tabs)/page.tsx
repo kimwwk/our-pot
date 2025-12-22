@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { KittyBalanceCard } from "@/components/widgets/KittyBalanceCard";
+import { ToReimburseCard } from "@/components/widgets/ToReimburseCard";
 import { QuickActions } from "@/components/widgets/QuickActions";
 import { AddExpenseSheet } from "@/components/sheets/AddExpenseSheet";
 import { ContributeSheet } from "@/components/sheets/ContributeSheet";
 import { EditExpenseSheet } from "@/components/sheets/EditExpenseSheet";
 import { EditContributionSheet } from "@/components/sheets/EditContributionSheet";
-import { CategoriesSection } from "@/components/widgets/CategoriesSection";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository";
@@ -77,7 +77,7 @@ export default function HomePage() {
     };
 
     return (
-        <div className="container mx-auto p-4 space-y-6 pb-24">
+        <div className="container mx-auto p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
             <KittyBalanceCard />
 
             <QuickActions
@@ -86,7 +86,7 @@ export default function HomePage() {
                 onAskAgent={() => router.push('/agent')}
             />
 
-            <CategoriesSection />
+            <ToReimburseCard />
 
             <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -97,6 +97,8 @@ export default function HomePage() {
                     transactions={transactions.slice(0, 5)}
                     isLoading={isLoading}
                     onTransactionClick={(id) => setEditingTransactionId(id)}
+                    showSearchBar={false}
+                    showFilters={false}
                 />
             </div>
 

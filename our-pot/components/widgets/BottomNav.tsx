@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, ListOrdered, Users, Sparkles, Settings } from "lucide-react"
+import { Home, ListOrdered, Sparkles, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function BottomNav() {
@@ -19,11 +19,11 @@ export function BottomNav() {
             href: "/transactions",
             icon: ListOrdered,
         },
-        {
-            name: "Members",
-            href: "/members",
-            icon: Users,
-        },
+        // {
+        //     name: "Analytics",
+        //     href: "/analytics",
+        //     icon: TrendingUp,
+        // },
         {
             name: "Agent",
             href: "/agent",
