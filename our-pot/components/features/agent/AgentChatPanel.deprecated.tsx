@@ -33,6 +33,18 @@ export function AgentChatPanel() {
   // Ref to store pending confirmation resolver
   const pendingConfirmationResolver = useRef<((result: any) => void) | null>(null);
 
+  // Refs to access current values in callbacks (avoid stale closures)
+  const dbRef = useRef(db);
+  const accountRef = useRef(account);
+  const isInitializedRef = useRef(isInitialized);
+
+  // Update refs when values change
+  useEffect(() => {
+    dbRef.current = db;
+    accountRef.current = account;
+    isInitializedRef.current = isInitialized;
+  }, [db, account, isInitialized]);
+
   // Manage input state locally (v2 API doesn't provide it)
   const [input, setInput] = useState("");
 
@@ -51,12 +63,25 @@ export function AgentChatPanel() {
       // CLIENT-SIDE TOOL EXECUTION
       const { toolName, args } = toolCall;
 
-      if (!db || !account) {
+      // Use refs to get current values (avoid stale closures)
+      const currentDb = dbRef.current;
+      const currentAccount = accountRef.current;
+      const currentIsInitialized = isInitializedRef.current;
+
+      console.log(`[Tool Call] ${toolName}`, {
+        hasDb: !!currentDb,
+        hasAccount: !!currentAccount,
+        isInitialized: currentIsInitialized,
+        args
+      });
+
+      if (!currentDb || !currentAccount) {
+        console.error(`[Tool Call Error] Missing: ${!currentDb ? 'db' : ''} ${!currentAccount ? 'account' : ''}`);
         addToolOutput({
           tool: toolName,
           toolCallId: toolCall.toolCallId,
           state: "output-error",
-          errorText: "Database or account not initialized",
+          errorText: `Database or account not initialized (db=${!!currentDb}, account=${!!currentAccount})`,
         });
         return;
       }
@@ -64,7 +89,7 @@ export function AgentChatPanel() {
       try {
         // READ TOOLS (Immediate Execution)
         if (toolName === "getCategories") {
-          const result = await executeGetCategories(db, account.id);
+          const result = await executeGetCategories(currentDb, currentAccount.id);
           addToolOutput({
             tool: toolName,
             toolCallId: toolCall.toolCallId,
@@ -74,7 +99,7 @@ export function AgentChatPanel() {
         }
 
         if (toolName === "getMembers") {
-          const result = await executeGetMembers(db, account.id);
+          const result = await executeGetMembers(currentDb, currentAccount.id);
           addToolOutput({
             tool: toolName,
             toolCallId: toolCall.toolCallId,
@@ -84,7 +109,7 @@ export function AgentChatPanel() {
         }
 
         if (toolName === "searchTransactions") {
-          const result = await executeSearchTransactions(db, account.id, args);
+          const result = await executeSearchTransactions(currentDb, currentAccount.id, args);
           addToolOutput({
             tool: toolName,
             toolCallId: toolCall.toolCallId,
@@ -96,8 +121,8 @@ export function AgentChatPanel() {
         // PROPOSAL TOOLS (Buffered)
         if (toolName === "createTransactionChangeRequest") {
           const result = await executeCreateTransactionChangeRequest(
-            db,
-            account.id,
+            currentDb,
+            currentAccount.id,
             {
               addChangeRequest: changeSetContext.addChangeRequest,
               removeChangeRequest: changeSetContext.removeChangeRequest,
@@ -114,8 +139,8 @@ export function AgentChatPanel() {
 
         if (toolName === "updateTransactionChangeRequest") {
           const result = await executeUpdateTransactionChangeRequest(
-            db,
-            account.id,
+            currentDb,
+            currentAccount.id,
             {
               addChangeRequest: changeSetContext.addChangeRequest,
               removeChangeRequest: changeSetContext.removeChangeRequest,
@@ -132,8 +157,8 @@ export function AgentChatPanel() {
 
         if (toolName === "deleteTransactionChangeRequest") {
           const result = await executeDeleteTransactionChangeRequest(
-            db,
-            account.id,
+            currentDb,
+            currentAccount.id,
             {
               addChangeRequest: changeSetContext.addChangeRequest,
               removeChangeRequest: changeSetContext.removeChangeRequest,
@@ -150,8 +175,8 @@ export function AgentChatPanel() {
 
         if (toolName === "createCategoryChangeRequest") {
           const result = await executeCreateCategoryChangeRequest(
-            db,
-            account.id,
+            currentDb,
+            currentAccount.id,
             {
               addChangeRequest: changeSetContext.addChangeRequest,
               removeChangeRequest: changeSetContext.removeChangeRequest,
@@ -236,13 +261,16 @@ export function AgentChatPanel() {
 
   // Handle Review Widget Actions
   const handleApprove = async () => {
-    if (!db || !account || !changeSetContext.currentChangeSetId) {
+    const currentDb = dbRef.current;
+    const currentAccount = accountRef.current;
+
+    if (!currentDb || !currentAccount || !changeSetContext.currentChangeSetId) {
       return;
     }
 
     try {
       // Execute changeset atomically
-      const repo = new ChangeSetRepository(db);
+      const repo = new ChangeSetRepository(currentDb);
       await repo.applyChangeSet(changeSetContext.currentChangeSetId);
 
       // Transition to approved

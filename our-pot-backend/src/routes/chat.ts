@@ -33,6 +33,35 @@ chat.post('/', async (c) => {
     const { messages } = body;
     const modelMessages = convertToModelMessages(messages)
 
+    // Log all messages for visibility
+    console.log('\n========================================');
+    console.log('=== CHAT REQUEST ===');
+    console.log(`Received ${messages.length} messages`);
+    console.log('========================================\n');
+
+    messages.forEach((msg: any, i: number) => {
+      console.log(`\n[Message ${i}] Role: ${msg.role}`);
+      if (msg.parts) {
+        msg.parts.forEach((part: any, j: number) => {
+          if (part.type === 'text') {
+            console.log(`  └─ Text: "${part.text}"`);
+          } else if (part.type === 'tool-call') {
+            console.log(`  └─ Tool Call: ${part.toolName}`);
+            console.log(`     Args: ${JSON.stringify(part.args, null, 2)}`);
+          } else if (part.type === 'tool-result') {
+            console.log(`  └─ Tool Result for: ${part.toolName}`);
+            console.log(`     Result: ${JSON.stringify(part.result, null, 2)}`);
+          } else {
+            console.log(`  └─ ${part.type}: ${JSON.stringify(part)}`);
+          }
+        });
+      } else if (msg.content) {
+        console.log(`  └─ Content: "${msg.content}"`);
+      }
+    });
+
+    console.log('\n========================================\n');
+
     // Stream response from OpenAI
     const result = streamText({
       model: openai("gpt-5.1"),
@@ -41,7 +70,29 @@ chat.post('/', async (c) => {
       messages: modelMessages,
       tools: allTools,
       stopWhen: stepCountIs(10),
-      toolChoice: "auto"
+      toolChoice: "auto",
+      onFinish: async ({ text, toolCalls, finishReason, usage }) => {
+        console.log('\n========================================');
+        console.log('=== AI RESPONSE ===');
+        console.log('========================================\n');
+
+        if (text) {
+          console.log(`AI Text: "${text}"`);
+        }
+
+        if (toolCalls && toolCalls.length > 0) {
+          console.log(`\nTool Calls (${toolCalls.length}):`);
+          toolCalls.forEach((call: any, i: number) => {
+            console.log(`  [${i}] ${call.toolName}`);
+            console.log(`      ID: ${call.toolCallId}`);
+            console.log(`      Args: ${JSON.stringify(call.args, null, 2)}`);
+          });
+        }
+
+        console.log(`\nFinish Reason: ${finishReason}`);
+        console.log(`Usage: ${JSON.stringify(usage, null, 2)}`);
+        console.log('\n========================================\n');
+      }
     });
 
     // Return streaming response compatible with Vercel AI SDK

@@ -1,9 +1,9 @@
-import { AgentChatPanel } from "@/components/features/agent/AgentChatPanel";
+import { AgentTab } from "@/components/features/agent/AgentTab";
 
 export default function AgentPage() {
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)]">
-            <AgentChatPanel />
+        <div className="p-4">
+            <AgentTab />
         </div>
     );
 }
