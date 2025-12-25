@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BaseSheet } from "@/components/common/BaseSheet";
+import { CurrencyInput } from "@/components/common/CurrencyInput";
+import { MemberPicker } from "@/components/common/MemberPicker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMembers } from "@/lib/data/hooks/useMembers";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
@@ -100,34 +100,22 @@ export function ContributeSheet({ isOpen, onClose, onSuccess }: ContributeSheetP
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
-                <div className="flex justify-center pt-1 pb-3">
-                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-                </div>
-
-                <SheetHeader className="px-1 pb-4">
-                    <SheetTitle>Add Contribution</SheetTitle>
-                </SheetHeader>
-
-                <div className="px-1 space-y-6 mt-2">
+        <BaseSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Add Contribution"
+        >
+            <div className="px-5 pb-6 space-y-6">
                     {/* Amount Input */}
                     <div className="space-y-2">
                         <Label>Amount</Label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-semibold text-muted-foreground">
-                                {getCurrencySymbol(account?.currency || "GBP")}
-                            </span>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                className="text-3xl h-16 pl-12 font-semibold text-center"
-                                placeholder="0.00"
-                                inputMode="decimal"
-                            />
-                        </div>
+                        <CurrencyInput
+                            value={amount}
+                            onChange={setAmount}
+                            currency={account?.currency || "GBP"}
+                            size="large"
+                            className="text-center"
+                        />
                     </div>
 
                     {/* Quick Amount Buttons */}
@@ -147,39 +135,31 @@ export function ContributeSheet({ isOpen, onClose, onSuccess }: ContributeSheetP
                     {/* Member Selector */}
                     <div className="space-y-2">
                         <Label>Who is contributing?</Label>
-                        <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-                            <SelectTrigger className="h-12">
-                                <SelectValue placeholder="Select member" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {humanMembers.map((member) => (
-                                    <SelectItem key={member.id} value={member.id}>
-                                        {member.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <MemberPicker
+                            members={humanMembers}
+                            selectedMemberId={selectedMemberId}
+                            onSelect={setSelectedMemberId}
+                            placeholder="Select member"
+                            memberSubtitle=""
+                        />
                     </div>
 
-                    {/* Submit Button */}
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={!amount || !selectedMemberId || isSubmitting}
-                        className="w-full h-12 text-base"
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Adding...
-                            </>
-                        ) : (
-                            `Add ${amount ? getCurrencySymbol(account?.currency || "GBP") + amount : ""} to Kitty`
-                        )}
-                    </Button>
-                </div>
-
-                <div className="pb-6" />
-            </SheetContent>
-        </Sheet>
+                {/* Submit Button */}
+                <Button
+                    onClick={handleSubmit}
+                    disabled={!amount || !selectedMemberId || isSubmitting}
+                    className="w-full h-12 text-base"
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                        </>
+                    ) : (
+                        `Add ${amount ? getCurrencySymbol(account?.currency || "GBP") + amount : ""} to Kitty`
+                    )}
+                </Button>
+            </div>
+        </BaseSheet>
     );
 }

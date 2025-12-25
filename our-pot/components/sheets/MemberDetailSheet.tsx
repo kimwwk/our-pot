@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Member, Transaction } from "@/lib/data/types";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BaseSheet } from "@/components/common/BaseSheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/format";
@@ -110,17 +110,12 @@ export function MemberDetailSheet({ member, isOpen, onClose }: MemberDetailSheet
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
-                <div className="flex justify-center pt-1 pb-3">
-                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-                </div>
-
-                <SheetHeader className="px-1 pb-4">
-                    <SheetTitle>Member Details</SheetTitle>
-                </SheetHeader>
-
-                <div className="px-1 space-y-6 mt-2">
+        <BaseSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Member Details"
+            contentClassName="px-1 space-y-6 mt-2 pb-6 overflow-y-auto"
+        >
                     {/* Member Header */}
                     <div className="flex flex-col items-center text-center">
                         <Avatar className="h-20 w-20 mb-3">
@@ -231,10 +226,6 @@ export function MemberDetailSheet({ member, isOpen, onClose }: MemberDetailSheet
                             </div>
                         )}
                     </div>
-                </div>
-
-                <div className="pb-6" />
-            </SheetContent>
-        </Sheet>
+        </BaseSheet>
     );
 }

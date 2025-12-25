@@ -29,9 +29,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, AlertCircle, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2, AlertCircle, MoreHorizontal, Users } from "lucide-react";
 import { Member } from "@/lib/data/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EmptyState } from "@/components/common/EmptyState";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -162,39 +163,51 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
                 </Dialog>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-                {members.filter(m => !m.is_kitty).map(member => (
-                    <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                        <Avatar className="h-10 w-10">
-                            <AvatarImage src={member.avatar_url} />
-                            <AvatarFallback>{member.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium flex-1">{member.name}</span>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedMember(member)}>
-                                    View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => setDeletingMember(member)}
-                                >
-                                    Delete Member
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                ))}
-            </div>
+            {members.filter(m => !m.is_kitty).length === 0 ? (
+                <EmptyState
+                    icon={Users}
+                    title="No members yet"
+                    description="Add household members to start tracking shared expenses together"
+                    action={{
+                        label: "Add Member",
+                        onClick: () => setIsOpen(true)
+                    }}
+                />
+            ) : (
+                <div className="grid grid-cols-1 gap-3">
+                    {members.filter(m => !m.is_kitty).map(member => (
+                        <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={member.avatar_url} />
+                                <AvatarFallback>{member.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium flex-1">{member.name}</span>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                    >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setSelectedMember(member)}>
+                                        View Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() => setDeletingMember(member)}
+                                    >
+                                        Delete Member
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Member Detail Sheet */}
             <MemberDetailSheet

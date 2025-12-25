@@ -24,6 +24,7 @@ import { ChangeSetRepository } from "@/lib/data/repositories/ChangeSetRepository
 import { buildContextAfterDecision } from "@/lib/ai/prompts";
 import { AgentInputModal } from "./AgentInputModal";
 import { ChangeSetReviewWidget } from "./ChangeSetReviewWidget";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export function AgentTab() {
   const { db, isInitialized } = useSQLite();
@@ -371,7 +372,6 @@ export function AgentTab() {
     return (
       <div className="space-y-6 pb-24">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">AI Agent</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Initializing...</p>
         </div>
       </div>
@@ -380,12 +380,6 @@ export function AgentTab() {
 
   return (
     <div className="space-y-6 pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">AI Agent</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Managing {account.name}</p>
-      </div>
-
       {/* Main action - Ask AI */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Button
@@ -447,21 +441,11 @@ export function AgentTab() {
 
       {/* Empty state when no changeset */}
       {changeSetContext.status !== "pending_approval" && !isProcessing && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-xl bg-muted/50 border border-dashed border-border p-8 text-center"
-        >
-          <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background border border-border">
-              <Sparkles className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </div>
-          <p className="font-medium text-foreground text-sm mb-1">No pending proposals</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Tell the AI about an expense and it will create a changeset for your review
-          </p>
-        </motion.div>
+        <EmptyState
+          icon={Sparkles}
+          title="No pending proposals"
+          description="Tell the AI about an expense and it will create a changeset for your review"
+        />
       )}
 
       {/* Input Modal */}

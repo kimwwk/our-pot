@@ -3,15 +3,17 @@
 import { useState, useEffect } from "react"
 import { Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { BaseSheet } from "@/components/common/BaseSheet"
+import { CurrencyInput } from "@/components/common/CurrencyInput"
+import { MemberPicker } from "@/components/common/MemberPicker"
 import { useMembers } from "@/lib/data/hooks/useMembers"
 import { useAccount } from "@/lib/data/contexts/AccountContext"
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext"
 import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository"
 import { Transaction } from "@/lib/data/types"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface EditContributionSheetProps {
     transactionId: string | null
@@ -141,54 +143,39 @@ export function EditContributionSheet({ transactionId, isOpen, onClose, onSucces
     }
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent side="bottom" className="h-[90vh] overflow-y-auto">
-                {/* Drag Handle */}
-                <div className="flex justify-center pt-1 pb-3">
-                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        <BaseSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            contentClassName="overflow-y-auto"
+            title="Edit Contribution"
+            headerAction={
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleDelete}
+                    disabled={isDeleting || isLoading}
+                >
+                    {isDeleting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
+                </Button>
+            }
+        >
+            {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-
-                {/* Header with Delete Button */}
-                <SheetHeader className="px-1 pb-6">
-                    <div className="flex items-center justify-between">
-                        <SheetTitle className="text-xl">Edit Contribution</SheetTitle>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 -mr-2"
-                            onClick={handleDelete}
-                            disabled={isDeleting || isLoading}
-                        >
-                            {isDeleting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
-                        </Button>
-                    </div>
-                </SheetHeader>
-
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : (
-                    <div className="px-1 pb-6 space-y-6">
+            ) : (
+                <div className="px-5 pb-6 space-y-6">
                         {/* Amount Input */}
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Amount
-                            </label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-semibold text-muted-foreground">
-                                    {getCurrencySymbol(account?.currency || "GBP")}
-                                </span>
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    className="text-2xl h-14 pl-12 font-semibold border-2"
-                                    placeholder="0.00"
-                                    inputMode="decimal"
-                                />
-                            </div>
+                            <Label>Amount</Label>
+                            <CurrencyInput
+                                value={amount}
+                                onChange={setAmount}
+                                currency={account?.currency || "GBP"}
+                                size="large"
+                                className="text-center"
+                            />
                         </div>
 
                         {/* Quick Amount Buttons */}
@@ -198,7 +185,7 @@ export function EditContributionSheet({ transactionId, isOpen, onClose, onSucces
                                     key={value}
                                     variant="outline"
                                     onClick={() => handleQuickAmount(value)}
-                                    className={amount === value.toString() ? "border-primary border-2 bg-primary/10" : "border-2"}
+                                    className={cn("h-12", amount === value.toString() && "border-primary bg-primary/10")}
                                 >
                                     {getCurrencySymbol(account?.currency || "GBP")}{value}
                                 </Button>
@@ -207,28 +194,21 @@ export function EditContributionSheet({ transactionId, isOpen, onClose, onSucces
 
                         {/* Member Selector */}
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Who is contributing?
-                            </label>
-                            <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-                                <SelectTrigger className="h-11 border-2">
-                                    <SelectValue placeholder="Select member" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {humanMembers.map((member) => (
-                                        <SelectItem key={member.id} value={member.id}>
-                                            {member.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Label>Who is contributing?</Label>
+                            <MemberPicker
+                                members={humanMembers}
+                                selectedMemberId={selectedMemberId}
+                                onSelect={setSelectedMemberId}
+                                placeholder="Select member"
+                                memberSubtitle=""
+                            />
                         </div>
 
                         {/* Update Button */}
                         <Button
                             onClick={handleUpdate}
                             disabled={!amount || !selectedMemberId || isSaving}
-                            className="w-full h-12 text-base font-semibold"
+                            className="w-full h-12 text-base"
                         >
                             {isSaving ? (
                                 <>
@@ -241,9 +221,6 @@ export function EditContributionSheet({ transactionId, isOpen, onClose, onSucces
                         </Button>
                     </div>
                 )}
-
-                <div className="pb-6" />
-            </SheetContent>
-        </Sheet>
+        </BaseSheet>
     )
 }

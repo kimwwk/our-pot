@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Sparkles, Camera, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { BaseSheet } from "@/components/common/BaseSheet";
 
 interface AgentInputModalProps {
   isOpen: boolean;
@@ -30,29 +30,15 @@ export function AgentInputModal({ isOpen, onClose, onSubmit, isProcessing }: Age
   ];
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent
-        side="bottom"
-        className="h-auto max-h-[85vh] p-0 rounded-t-2xl"
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-8 h-1 rounded-full bg-border" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 pb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="font-medium text-foreground text-sm">Ask AI Agent</p>
-            <p className="text-xs text-muted-foreground">Describe an expense or ask for help</p>
-          </div>
-        </div>
-
-        {/* Input area */}
-        <div className="px-5 pb-4">
+    <BaseSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Ask AI Agent"
+      description="Describe an expense or ask for help"
+      icon={<Sparkles className="h-4 w-4" />}
+    >
+      {/* Input area */}
+      <div className="px-5 pb-4">
           <div className="relative rounded-xl bg-muted border border-transparent focus-within:border-primary/30 focus-within:bg-background transition-all">
             <textarea
               value={message}
@@ -130,9 +116,6 @@ export function AgentInputModal({ isOpen, onClose, onSubmit, isProcessing }: Age
             </div>
           </div>
         )}
-
-        <div className="pb-safe" />
-      </SheetContent>
-    </Sheet>
+    </BaseSheet>
   );
 }

@@ -11,10 +11,11 @@ interface TransactionItemProps {
     transaction: Transaction;
     category?: Category;
     member?: Member;
+    currency?: string;
     onClick?: () => void;
 }
 
-export function TransactionItem({ transaction, category, member, onClick }: TransactionItemProps) {
+export function TransactionItem({ transaction, category, member, currency = "GBP", onClick }: TransactionItemProps) {
     const isExpense = transaction.type === "EXPENSE";
 
     // Smart date formatting
@@ -78,7 +79,7 @@ export function TransactionItem({ transaction, category, member, onClick }: Tran
                     isExpense ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
                 )}>
                     {isExpense ? "-" : "+"}
-                    {formatCurrency(Math.abs(transaction.amount))}
+                    {formatCurrency(Math.abs(transaction.amount), currency)}
                 </div>
 
                 {/* Status Badge */}

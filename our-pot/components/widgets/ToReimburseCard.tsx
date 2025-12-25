@@ -15,6 +15,7 @@ export function ToReimburseCard() {
   const { account } = useAccount();
   const { db } = useSQLite();
   const [totalOwed, setTotalOwed] = useState(0);
+  const [membersOwingCount, setMembersOwingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const humanMembers = useMemo(() => members.filter(m => !m.is_kitty), [members]);
@@ -23,6 +24,7 @@ export function ToReimburseCard() {
     async function calculateTotalOwed() {
       if (!db || !account || humanMembers.length === 0) {
         setTotalOwed(0);
+        setMembersOwingCount(0);
         setIsLoading(false);
         return;
       }
@@ -30,17 +32,23 @@ export function ToReimburseCard() {
       try {
         const repo = new TransactionRepository(db);
         let total = 0;
+        let count = 0;
 
         // Sum up all pending reimbursements for all human members
         for (const member of humanMembers) {
           const owed = await repo.getOwedByMember(member.id);
-          total += owed;
+          if (owed > 0) {
+            total += owed;
+            count++;
+          }
         }
 
         setTotalOwed(total);
+        setMembersOwingCount(count);
       } catch (error) {
         console.error("Failed to calculate total owed:", error);
         setTotalOwed(0);
+        setMembersOwingCount(0);
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +100,7 @@ export function ToReimburseCard() {
       </div>
       <p className="text-xs text-muted-foreground">
         {hasAmount
-          ? `${humanMembers.filter(m => m.id).length} member${humanMembers.length > 1 ? 's' : ''} waiting for reimbursement`
+          ? `${membersOwingCount} member${membersOwingCount > 1 ? 's' : ''} waiting for reimbursement`
           : "No pending reimbursements"}
       </p>
     </motion.div>

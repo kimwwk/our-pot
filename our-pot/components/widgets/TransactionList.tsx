@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { Transaction, Category, Member } from "@/lib/data/types";
 import { TransactionItem } from "./TransactionItem";
-import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/common/empty-state";
+import { EmptyState } from "@/components/common/EmptyState";
 import { formatDate } from "@/lib/utils/format";
-import { Search, Receipt } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { useCategories } from "@/lib/data/hooks/useCategories";
 import { useMembers } from "@/lib/data/hooks/useMembers";
+import { useAccount } from "@/lib/data/contexts/AccountContext";
+import { TransactionSearchBar } from "@/components/features/transactions/TransactionSearchBar";
 
 interface TransactionListProps {
     transactions: Transaction[];
@@ -27,6 +28,7 @@ export function TransactionList({
 }: TransactionListProps) {
     const { categories } = useCategories();
     const { members } = useMembers();
+    const { account } = useAccount();
     const [searchTerm, setSearchTerm] = useState("");
 
     const categoryMap = useMemo(() => {
@@ -83,16 +85,10 @@ export function TransactionList({
     return (
         <div className="space-y-4">
             {showSearchBar && (
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search transactions..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+                <TransactionSearchBar
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                />
             )}
 
             <div className="space-y-6">
@@ -108,6 +104,7 @@ export function TransactionList({
                                     transaction={t}
                                     category={categoryMap.get(t.category_id || '')}
                                     member={memberMap.get(t.member_id)}
+                                    currency={account?.currency || "GBP"}
                                     onClick={() => onTransactionClick?.(t.id)}
                                 />
                             ))}

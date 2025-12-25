@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChangeSet, ChangeRequest } from "@/lib/data/contexts/ChangeSetContext";
+import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { convertCentsToDecimal } from "@/lib/ai/validation";
 import { formatCurrency } from "@/lib/utils/format";
 
@@ -27,6 +28,7 @@ interface ReviewWidgetProps {
 
 export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWidgetProps) {
   const { status, metadata, getBufferAsArray } = useChangeSet();
+  const { account } = useAccount();
   const [isExpanded, setIsExpanded] = useState(true);
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -175,7 +177,7 @@ export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWi
                           </p>
                           {data.amount && (
                             <p className="text-sm text-primary font-medium mt-1">
-                              {formatCurrency(data.amount * 100, "GBP")}
+                              {formatCurrency(data.amount * 100, account?.currency || "GBP")}
                               {data.merchant && (
                                 <span className="text-muted-foreground font-normal"> · {data.merchant}</span>
                               )}

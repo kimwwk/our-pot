@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingDown, Calendar, Sparkles } from "lucide-react";
-import { EmptyState } from "@/components/common/empty-state";
+import { EmptyState } from "@/components/common/EmptyState";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 
 export default function AnalyticsPage() {

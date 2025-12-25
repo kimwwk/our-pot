@@ -62,7 +62,7 @@ export default function MembersPage() {
                         </span>
                     </div>
                     <p className="text-xl font-semibold">
-                        {formatCurrency(totals.totalContributed, account?.currency || "CAD")}
+                        {formatCurrency(totals.totalContributed, account?.currency || "GBP")}
                     </p>
                 </div>
                 <div className={`rounded-xl p-4 ${totals.totalOwed > 0 ? "bg-amber-50 dark:bg-amber-950 border border-amber-100 dark:border-amber-900" : "bg-muted border border-border"}`}>
@@ -73,7 +73,7 @@ export default function MembersPage() {
                         </span>
                     </div>
                     <p className="text-xl font-semibold">
-                        {formatCurrency(totals.totalOwed, account?.currency || "CAD")}
+                        {formatCurrency(totals.totalOwed, account?.currency || "GBP")}
                     </p>
                 </div>
             </div>
@@ -138,11 +138,11 @@ function MemberRow({ member, onClick }: { member: Member; onClick: () => void })
                 {!isLoading && (
                     <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-[10px] text-muted-foreground">
-                            Contributed <span className="text-foreground font-medium">{formatCurrency(contributed, account?.currency || "CAD")}</span>
+                            Contributed <span className="text-foreground font-medium">{formatCurrency(contributed, account?.currency || "GBP")}</span>
                         </span>
                         {owedByKitty > 0 && (
                             <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-md">
-                                Owed {formatCurrency(owedByKitty, account?.currency || "CAD")}
+                                Owed {formatCurrency(owedByKitty, account?.currency || "GBP")}
                             </span>
                         )}
                     </div>
