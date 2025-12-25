@@ -59,7 +59,7 @@ export async function saveBackupFile(
     if (isNativePlatform()) {
         // Native: Use Capacitor Filesystem
         try {
-            const base64Data = arrayBufferToBase64(fileData.buffer);
+            const base64Data = arrayBufferToBase64(fileData.buffer as ArrayBuffer);
             const result = await Filesystem.writeFile({
                 path: filename,
                 data: base64Data,
@@ -73,7 +73,7 @@ export async function saveBackupFile(
     } else {
         // Web: Use browser download
         try {
-            const blob = new Blob([fileData], { type: 'application/x-sqlite3' });
+            const blob = new Blob([fileData.buffer as ArrayBuffer], { type: 'application/x-sqlite3' });
             downloadBlobInBrowser(blob, filename);
             const url = URL.createObjectURL(blob);
             return url; // Return temp URL
