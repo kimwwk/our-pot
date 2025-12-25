@@ -11,23 +11,13 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-// CORS middleware
-app.use('*', async (c, next) => {
-  // Parse allowed origins from environment or use defaults
-  const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000',
-    'capacitor://localhost',
-  ];
-
-  const corsMiddleware = cors({
-    origin: allowedOrigins,
-    allowMethods: ['POST', 'GET', 'OPTIONS'],
-    allowHeaders: ['Content-Type'],
-    maxAge: 86400, // 24 hours
-  });
-
-  return corsMiddleware(c, next);
-});
+// CORS middleware - Allow all origins for mobile app
+app.use('*', cors({
+  origin: '*', // Allow all origins (needed for Capacitor mobile apps)
+  allowMethods: ['POST', 'GET', 'OPTIONS'],
+  allowHeaders: ['Content-Type'],
+  maxAge: 86400, // 24 hours
+}));
 
 // Error handling middleware
 app.onError(errorHandler);
