@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bell, Users, Shield, HelpCircle, ChevronRight, Moon, Palette, Info } from "lucide-react";
+import { Bell, Users, Shield, HelpCircle, ChevronRight, Moon, Palette, Info, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
 import { CategoryManager } from "@/components/forms/CategoryManager";
 import { MemberManager } from "@/components/forms/MemberManager";
+import { BackupSheet } from "@/components/sheets/BackupSheet";
+import { RestoreSheet } from "@/components/sheets/RestoreSheet";
 import { useCategories } from "@/lib/data/hooks/useCategories";
 import { useMembers } from "@/lib/data/hooks/useMembers";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
@@ -19,6 +21,8 @@ export function SettingsTab() {
   const { members, refetch: refetchMembers } = useMembers();
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showMemberManager, setShowMemberManager] = useState(false);
+  const [showBackupSheet, setShowBackupSheet] = useState(false);
+  const [showRestoreSheet, setShowRestoreSheet] = useState(false);
 
   const settingGroups = [
     {
@@ -35,6 +39,23 @@ export function SettingsTab() {
           label: "Categories",
           description: "Customize expense categories",
           onClick: () => setShowCategoryManager(true),
+        },
+      ],
+    },
+    {
+      title: "Data Management",
+      items: [
+        {
+          icon: Download,
+          label: "Backup Database",
+          description: "Export your data",
+          onClick: () => setShowBackupSheet(true),
+        },
+        {
+          icon: Upload,
+          label: "Restore from Backup",
+          description: "Import previous backup",
+          onClick: () => setShowRestoreSheet(true),
         },
       ],
     },
@@ -178,6 +199,18 @@ export function SettingsTab() {
           </div>
         </div>
       )}
+
+      {/* Backup Sheet */}
+      <BackupSheet
+        isOpen={showBackupSheet}
+        onClose={() => setShowBackupSheet(false)}
+      />
+
+      {/* Restore Sheet */}
+      <RestoreSheet
+        isOpen={showRestoreSheet}
+        onClose={() => setShowRestoreSheet(false)}
+      />
     </>
   );
 }
