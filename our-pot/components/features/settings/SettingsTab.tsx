@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bell, Users, Shield, HelpCircle, ChevronRight, Moon, Palette, Info, Download, Upload } from "lucide-react";
+import { Bell, Users, Shield, HelpCircle, ChevronRight, Moon, Palette, Info, Download, Upload, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
@@ -13,6 +13,7 @@ import { RestoreSheet } from "@/components/sheets/RestoreSheet";
 import { useCategories } from "@/lib/data/hooks/useCategories";
 import { useMembers } from "@/lib/data/hooks/useMembers";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
+import { getDebugLogs, clearDebugLogs } from "@/lib/utils/debug-logger";
 
 export function SettingsTab() {
   const { theme, setTheme } = useTheme();
@@ -23,6 +24,14 @@ export function SettingsTab() {
   const [showMemberManager, setShowMemberManager] = useState(false);
   const [showBackupSheet, setShowBackupSheet] = useState(false);
   const [showRestoreSheet, setShowRestoreSheet] = useState(false);
+  const [showDebugLogs, setShowDebugLogs] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<Array<{ timestamp: string; type: string; message: string }>>([]);
+
+  const handleShowDebugLogs = () => {
+    const logs = getDebugLogs();
+    setDebugLogs(logs);
+    setShowDebugLogs(true);
+  };
 
   const settingGroups = [
     {
@@ -85,6 +94,17 @@ export function SettingsTab() {
       ],
     },
     {
+      title: "Developer Tools",
+      items: [
+        {
+          icon: Bug,
+          label: "View Debug Logs",
+          description: "Show console logs",
+          onClick: handleShowDebugLogs,
+        },
+      ],
+    },
+    {
       title: "About",
       items: [
         {
@@ -109,7 +129,7 @@ export function SettingsTab() {
 
   return (
     <>
-      <div className="p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
+      <div className="p-4 space-y-6 pb-24">
         {/* Settings groups */}
         {settingGroups.map((group, groupIndex) => (
           <motion.div
@@ -211,6 +231,67 @@ export function SettingsTab() {
         isOpen={showRestoreSheet}
         onClose={() => setShowRestoreSheet(false)}
       />
+
+      {/* Debug Logs Modal */}
+      {showDebugLogs && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h2 className="text-xl font-bold">Debug Logs</h2>
+                <p className="text-sm text-muted-foreground">Last {debugLogs.length} console messages</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    clearDebugLogs();
+                    setDebugLogs([]);
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDebugLogs(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <div className="space-y-2 font-mono text-xs">
+                {debugLogs.length === 0 ? (
+                  <p className="text-muted-foreground">No logs yet. Logs will appear here as you use the app.</p>
+                ) : (
+                  debugLogs.map((log, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded ${
+                        log.type === 'error'
+                          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                          : log.type === 'warn'
+                          ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-muted-foreground shrink-0">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                        <span className="flex-1 whitespace-pre-wrap break-all">
+                          {log.message}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

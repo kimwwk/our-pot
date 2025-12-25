@@ -4,11 +4,11 @@ import { useState } from "react";
 import { BaseSheet } from "@/components/common/BaseSheet";
 import { Button } from "@/components/ui/button";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
+import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { toast } from "sonner";
 import { Loader2, Upload, AlertTriangle, FileUp } from "lucide-react";
 import { validateBackupFile, getBackupMetadata, importDatabase, type BackupMetadata } from "@/lib/data/import/db-backup-importer";
 import { pickBackupFile } from "@/lib/platform/file-operations";
-import { restartApp } from "@/lib/platform/app-restart";
 import { isNativePlatform } from "@/lib/platform/platform-detect";
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
@@ -19,6 +19,7 @@ interface RestoreSheetProps {
 
 export function RestoreSheet({ isOpen, onClose }: RestoreSheetProps) {
     const { db } = useSQLite();
+    const { reloadAccount } = useAccount();
     const [isRestoring, setIsRestoring] = useState(false);
     const [selectedFile, setSelectedFile] = useState<{ data: Uint8Array; name: string } | null>(null);
     const [metadata, setMetadata] = useState<BackupMetadata | null>(null);
@@ -80,13 +81,18 @@ export function RestoreSheet({ isOpen, onClose }: RestoreSheetProps) {
             // Import the database
             await importDatabase(sqlite, db, selectedFile.data);
 
-            toast.success('Database restored successfully. Restarting...');
+            toast.success('Database restored successfully!');
 
-            // Wait a moment for the toast to show
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Close the modal and reset state
+            setIsRestoring(false);
+            setSelectedFile(null);
+            setMetadata(null);
+            setConfirmed(false);
+            onClose();
 
-            // Restart the app
-            await restartApp();
+            // Reload account data to reflect the restored database
+            // This triggers a re-render of all components using the account context
+            await reloadAccount();
         } catch (error) {
             console.error('Restore failed:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to restore database');
@@ -198,13 +204,9 @@ export function RestoreSheet({ isOpen, onClose }: RestoreSheetProps) {
                             </span>
                         </label>
 
-                        {/* Restart Message */}
+                        {/* Info Message */}
                         <div className="text-sm text-muted-foreground">
-                            {isNative ? (
-                                <p>ℹ️ The app will close after restore. Please reopen it to see your restored data.</p>
-                            ) : (
-                                <p>ℹ️ The page will refresh automatically after restore.</p>
-                            )}
+                            <p>ℹ️ Your data will be restored and the page will refresh automatically.</p>
                         </div>
 
                         {/* Action Buttons */}

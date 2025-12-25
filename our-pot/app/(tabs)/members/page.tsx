@@ -39,7 +39,7 @@ export default function MembersPage() {
     }
 
     return (
-        <div className="pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24 px-4">
+        <div className="pt-4 space-y-6 pb-24 px-4">
             {/* Header */}
             <div className="flex items-center justify-end">
                 <Button

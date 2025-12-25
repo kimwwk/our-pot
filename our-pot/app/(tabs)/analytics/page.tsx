@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
   const totalSpent = 0;
 
   return (
-    <div className="p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
+    <div className="p-4 space-y-6 pb-24">
       {/* Period selector */}
       <div className="flex gap-2">
         {["Week", "Month", "Year"].map((period, i) => (

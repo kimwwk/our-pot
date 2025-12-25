@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     name TEXT NOT NULL,
     currency TEXT NOT NULL DEFAULT 'GBP',
     balance INTEGER NOT NULL DEFAULT 0,
+    emoji TEXT DEFAULT '💰',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     deleted_at TEXT
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS members (
     role TEXT NOT NULL DEFAULT 'member',
     is_kitty BOOLEAN NOT NULL DEFAULT 0,
     avatar_url TEXT,
+    email TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     deleted_at TEXT,
@@ -53,6 +55,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     merchant TEXT,
     description TEXT NOT NULL,
     date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'completed',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     deleted_at TEXT,
@@ -147,43 +150,47 @@ BEGIN
     WHERE id = OLD.account_id;
 END;
 
--- Unique Indexes
-CREATE UNIQUE INDEX IF NOT EXISTS unique_kitty_per_account
-ON members(account_id)
-WHERE is_kitty = 1 AND deleted_at IS NULL;
+-- Triggers for Kitty Constraint
+-- Ensure only one kitty member per account
+-- Using triggers instead of partial index because SQLite's export/import doesn't preserve partial indexes
+CREATE TRIGGER IF NOT EXISTS enforce_one_kitty_per_account_insert
+BEFORE INSERT ON members
+WHEN NEW.is_kitty = 1
+BEGIN
+  SELECT RAISE(ABORT, 'Only one kitty member allowed per account')
+  WHERE EXISTS (
+    SELECT 1 FROM members
+    WHERE account_id = NEW.account_id
+    AND is_kitty = 1
+    AND id != NEW.id
+    AND deleted_at IS NULL
+  );
+END;
 
--- Indexes for Accounts
-CREATE INDEX IF NOT EXISTS idx_accounts_deletedAt ON accounts(deleted_at);
+CREATE TRIGGER IF NOT EXISTS enforce_one_kitty_per_account_update
+BEFORE UPDATE ON members
+WHEN NEW.is_kitty = 1
+BEGIN
+  SELECT RAISE(ABORT, 'Only one kitty member allowed per account')
+  WHERE EXISTS (
+    SELECT 1 FROM members
+    WHERE account_id = NEW.account_id
+    AND is_kitty = 1
+    AND id != NEW.id
+    AND deleted_at IS NULL
+  );
+END;
 
--- Indexes for Members
-CREATE INDEX IF NOT EXISTS idx_members_accountId ON members(account_id);
-CREATE INDEX IF NOT EXISTS idx_members_isKitty ON members(account_id, is_kitty);
-CREATE INDEX IF NOT EXISTS idx_members_deletedAt ON members(deleted_at);
+-- Essential Indexes
+-- Only keeping indexes that provide real performance benefits at scale
 
--- Indexes for Categories
-CREATE INDEX IF NOT EXISTS idx_categories_accountId ON categories(account_id);
-CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(account_id, name);
-CREATE INDEX IF NOT EXISTS idx_categories_deletedAt ON categories(deleted_at);
-
--- Indexes for Transactions
+-- Transactions (the only table that grows large)
 CREATE INDEX IF NOT EXISTS idx_transactions_accountId ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_memberId ON transactions(member_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_categoryId ON transactions(category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date DESC);
-CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
-CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON transactions(merchant);
-CREATE INDEX IF NOT EXISTS idx_transactions_deletedAt ON transactions(deleted_at);
-CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions(account_id, date DESC);
 
--- Indexes for ChangeSets
-CREATE INDEX IF NOT EXISTS idx_changesets_status ON changesets(status);
-CREATE INDEX IF NOT EXISTS idx_changesets_proposedAt ON changesets(proposed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_changesets_toolCallId ON changesets(tool_call_id);
-
--- Indexes for Change Requests
+-- Change Requests (for FK lookups)
 CREATE INDEX IF NOT EXISTS idx_change_requests_changesetId ON change_requests(changeset_id);
-CREATE INDEX IF NOT EXISTS idx_change_requests_executionOrder ON change_requests(changeset_id, execution_order);
-CREATE INDEX IF NOT EXISTS idx_change_requests_entityId ON change_requests(entity_id);
 `;
 
 export default schema;

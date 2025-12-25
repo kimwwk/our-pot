@@ -6,6 +6,7 @@ import { SQLiteProvider } from "@/lib/data/contexts/SQLiteContext";
 import { AccountProvider } from "@/lib/data/contexts/AccountContext";
 import { ChangeSetProvider } from "@/lib/data/contexts/ChangeSetContext";
 import { Toaster } from "@/components/ui/sonner";
+import "@/lib/utils/debug-logger"; // Initialize debug logger
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -48,15 +48,52 @@ export async function exportDatabase(db: SQLiteDBConnection): Promise<Uint8Array
         // Note: This is a simplified approach. In production, you might want to
         // use the native SQLite export functionality or copy the actual .db file
 
+        // Debug: Check current data before export
+        const membersCheck = await db.query('SELECT id, name, is_kitty, deleted_at FROM members');
+        console.log('[DEBUG EXPORT] ========== BACKUP EXPORT START ==========');
+        console.log('[DEBUG EXPORT] Total members in DB:', membersCheck.values?.length || 0);
+        console.log('[DEBUG EXPORT] Members:', membersCheck.values?.map(m => ({
+            name: m.name,
+            is_kitty: m.is_kitty,
+            deleted: !!m.deleted_at
+        })));
+
+        const transactionsCheck = await db.query('SELECT id, type, amount, deleted_at FROM transactions');
+        console.log('[DEBUG EXPORT] Total transactions:', transactionsCheck.values?.length || 0);
+
+        const accountsCheck = await db.query('SELECT id, name, balance FROM accounts WHERE deleted_at IS NULL');
+        console.log('[DEBUG EXPORT] Accounts:', accountsCheck.values);
+
         // For now, we'll export as JSON and re-encode
         const jsonExport = await db.exportToJson('full');
+
+        console.log('[DEBUG EXPORT] exportToJson returned type:', typeof jsonExport);
+        console.log('[DEBUG EXPORT] exportToJson top-level keys:', Object.keys(jsonExport));
+
+        // Check members table in export
+        const exportData: any = jsonExport.export || jsonExport;
+        const membersTable = exportData.tables?.find((t: any) => t.name === 'members');
+        if (membersTable) {
+            console.log('[DEBUG EXPORT] Members table in export:', {
+                rowCount: membersTable.values?.length || 0,
+                schema: membersTable.schema?.map((s: any) => s.column)
+            });
+            console.log('[DEBUG EXPORT] Exported member rows:', membersTable.values);
+        } else {
+            console.error('[DEBUG EXPORT] ⚠️  Members table NOT found in export!');
+        }
 
         // Convert JSON export to string
         const jsonString = JSON.stringify(jsonExport);
 
+        console.log('[DEBUG EXPORT] JSON string length:', jsonString.length);
+        console.log('[DEBUG EXPORT] ========== BACKUP EXPORT END ==========');
+
         // Convert string to Uint8Array
         const encoder = new TextEncoder();
         const data = encoder.encode(jsonString);
+
+        console.log('[DEBUG EXPORT] Final Uint8Array size:', data.length, 'bytes');
 
         return data;
     } catch (error) {

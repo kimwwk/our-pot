@@ -11,7 +11,7 @@ export default function TabsLayout({
     return (
         <div className="flex flex-col min-h-screen pb-16">
             {/* Header with PotSwitcher */}
-            <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
+            <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg pt-[env(safe-area-inset-top,0px)]">
                 <div className="container max-w-md mx-auto p-4 flex justify-between items-center">
                     <PotSwitcher />
                 </div>

@@ -77,7 +77,7 @@ export default function HomePage() {
     };
 
     return (
-        <div className="container mx-auto p-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-6 pb-24">
+        <div className="container mx-auto p-4 space-y-6 pb-24">
             <KittyBalanceCard />
 
             <QuickActions

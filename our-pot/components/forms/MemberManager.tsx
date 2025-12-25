@@ -163,7 +163,7 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
                 </Dialog>
             </div>
 
-            {members.filter(m => !m.is_kitty).length === 0 ? (
+            {members.length === 0 ? (
                 <EmptyState
                     icon={Users}
                     title="No members yet"
@@ -175,13 +175,16 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
                 />
             ) : (
                 <div className="grid grid-cols-1 gap-3">
-                    {members.filter(m => !m.is_kitty).map(member => (
+                    {members.map(member => (
                         <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                             <Avatar className="h-10 w-10">
                                 <AvatarImage src={member.avatar_url} />
                                 <AvatarFallback>{member.name[0]}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium flex-1">{member.name}</span>
+                            <span className="font-medium flex-1">
+                                {member.name}
+                                {member.is_kitty ? ' (Pot)' : ''}
+                            </span>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
@@ -196,12 +199,14 @@ export function MemberManager({ onUpdate, members }: MemberManagerProps) {
                                     <DropdownMenuItem onClick={() => setSelectedMember(member)}>
                                         View Details
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive"
-                                        onClick={() => setDeletingMember(member)}
-                                    >
-                                        Delete Member
-                                    </DropdownMenuItem>
+                                    {!member.is_kitty && (
+                                        <DropdownMenuItem
+                                            className="text-destructive focus:text-destructive"
+                                            onClick={() => setDeletingMember(member)}
+                                        >
+                                            Delete Member
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
