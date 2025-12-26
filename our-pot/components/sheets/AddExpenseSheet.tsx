@@ -10,7 +10,7 @@ import { MemberPicker } from "@/components/common/MemberPicker"
 import { useCategories } from "@/lib/data/hooks/useCategories"
 import { useMembers } from "@/lib/data/hooks/useMembers"
 import { useAccount } from "@/lib/data/contexts/AccountContext"
-import { cn } from "@/lib/utils"
+import { cn, getTodayDateString } from "@/lib/utils"
 
 interface AddExpenseSheetProps {
     isOpen: boolean
@@ -62,7 +62,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSubmit }: AddExpenseSheetPr
                 amount: amountNum,
                 categoryId: selectedCategory,
                 memberId: finalMemberId,
-                date: new Date().toISOString().split('T')[0]
+                date: getTodayDateString()
             })
 
             // Reset

@@ -24,7 +24,7 @@ export function AgentInputModal({ isOpen, onClose, onSubmit, isProcessing }: Age
   };
 
   const suggestions = [
-    "I paid £42 for groceries at Tesco",
+    "The pot paid £42 for groceries at Tesco",
     "Add a Pet Supplies category",
     "Split last expense equally"
   ];

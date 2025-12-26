@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Transaction, Category, Member } from "@/lib/data/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils/format";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 import { ArrowDownLeft, ArrowUpRight, ShoppingBag } from "lucide-react";
 
 interface TransactionItemProps {
@@ -20,7 +20,7 @@ export function TransactionItem({ transaction, category, member, currency = "GBP
 
     // Smart date formatting
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
+        const date = parseLocalDate(dateString);
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);

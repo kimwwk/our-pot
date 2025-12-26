@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseLocalDate } from "@/lib/utils";
 
 /**
  * Validation error structure
@@ -48,8 +49,10 @@ export function convertCentsToDecimal(amountInCents: number): number {
  * Business rule: date cannot be in the future
  */
 export function validateDate(dateString: string): void {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   const now = new Date();
+  // Set now to start of day for fair comparison
+  now.setHours(0, 0, 0, 0);
 
   if (date > now) {
     throw new Error("Transaction date cannot be in the future");

@@ -5,7 +5,7 @@ import { KittyBalanceCard } from "@/components/widgets/KittyBalanceCard";
 import { ToReimburseCard } from "@/components/widgets/ToReimburseCard";
 import { QuickActions } from "@/components/widgets/QuickActions";
 import { AddExpenseSheet } from "@/components/sheets/AddExpenseSheet";
-import { ContributeSheet } from "@/components/sheets/ContributeSheet";
+import { AddContributeSheet } from "@/components/sheets/AddContributeSheet";
 import { EditExpenseSheet } from "@/components/sheets/EditExpenseSheet";
 import { EditContributionSheet } from "@/components/sheets/EditContributionSheet";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
@@ -108,7 +108,7 @@ export default function HomePage() {
                 onSubmit={handleAddExpense}
             />
 
-            <ContributeSheet
+            <AddContributeSheet
                 isOpen={showContribute}
                 onClose={() => setShowContribute(false)}
             />

@@ -13,14 +13,15 @@ import { TransactionRepository } from "@/lib/data/repositories/TransactionReposi
 import { ulid } from "ulid";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getTodayDateString } from "@/lib/utils";
 
-interface ContributeSheetProps {
+interface AddContributeSheetProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
 }
 
-export function ContributeSheet({ isOpen, onClose, onSuccess }: ContributeSheetProps) {
+export function AddContributeSheet({ isOpen, onClose, onSuccess }: AddContributeSheetProps) {
     const { members } = useMembers();
     const { account, reloadAccount } = useAccount();
     const { db } = useSQLite();
@@ -52,7 +53,7 @@ export function ContributeSheet({ isOpen, onClose, onSuccess }: ContributeSheetP
         try {
             const repo = new TransactionRepository(db);
             const now = new Date().toISOString();
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayDateString();
 
             // Convert amount to cents
             const amountInCents = Math.round(amountNum * 100);

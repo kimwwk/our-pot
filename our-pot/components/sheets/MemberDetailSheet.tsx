@@ -12,6 +12,7 @@ import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { parseLocalDate } from "@/lib/utils";
 
 interface MemberDetailSheetProps {
     member: Member | null;
@@ -95,7 +96,7 @@ export function MemberDetailSheet({ member, isOpen, onClose }: MemberDetailSheet
     };
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
+        const date = parseLocalDate(dateString);
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);

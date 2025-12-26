@@ -1,3 +1,5 @@
+import { parseLocalDate } from "@/lib/utils";
+
 export function formatCurrency(amountInCents: number, currency: string = 'GBP'): string {
     // Convert cents to decimal
     const amount = amountInCents / 100;
@@ -21,7 +23,7 @@ export function parseCurrency(displayAmount: string): number {
 
 export function formatDate(dateStr: string): string {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
     return new Intl.DateTimeFormat('en-GB', {
         day: 'numeric',
         month: 'short',
@@ -31,7 +33,8 @@ export function formatDate(dateStr: string): string {
 
 export function formatDateTime(dateStr: string): string {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    // For ISO datetime strings, keep using new Date() as they include timezone info
+    const date = dateStr.includes('T') ? new Date(dateStr) : parseLocalDate(dateStr);
     return new Intl.DateTimeFormat('en-GB', {
         day: 'numeric',
         month: 'short',

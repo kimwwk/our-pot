@@ -5,7 +5,7 @@ import { TransactionList } from "@/components/widgets/TransactionList";
 import { MonthSlider } from "@/components/features/transactions/MonthSlider";
 import { useTransactions } from "@/lib/data/hooks/useTransactions";
 import { AddExpenseSheet } from "@/components/sheets/AddExpenseSheet";
-import { ContributeSheet } from "@/components/sheets/ContributeSheet";
+import { AddContributeSheet } from "@/components/sheets/AddContributeSheet";
 import { EditExpenseSheet } from "@/components/sheets/EditExpenseSheet";
 import { EditContributionSheet } from "@/components/sheets/EditContributionSheet";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
@@ -14,6 +14,7 @@ import { TransactionRepository } from "@/lib/data/repositories/TransactionReposi
 import { MemberRepository } from "@/lib/data/repositories/MemberRepository";
 import { generateId } from "@/lib/utils/ulid";
 import { toast } from "sonner";
+import { parseLocalDate } from "@/lib/utils";
 
 export default function TransactionsPage() {
     const { transactions, isLoading, refetch } = useTransactions({ limit: 200 });
@@ -75,7 +76,7 @@ export default function TransactionsPage() {
     // Filter transactions by selected month
     const filteredTransactions = useMemo(() => {
         return transactions.filter(t => {
-            const transactionDate = new Date(t.date);
+            const transactionDate = parseLocalDate(t.date);
             return (
                 transactionDate.getFullYear() === selectedMonth.getFullYear() &&
                 transactionDate.getMonth() === selectedMonth.getMonth()
@@ -102,7 +103,7 @@ export default function TransactionsPage() {
                 onSubmit={handleAddExpense}
             />
 
-            <ContributeSheet
+            <AddContributeSheet
                 isOpen={showContribute}
                 onClose={() => setShowContribute(false)}
                 onSuccess={handleTransactionUpdated}

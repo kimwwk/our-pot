@@ -9,6 +9,7 @@ import { CategoryRepository } from "@/lib/data/repositories/CategoryRepository";
 import { MemberRepository } from "@/lib/data/repositories/MemberRepository";
 import { TransactionRepository } from "@/lib/data/repositories/TransactionRepository";
 import { validateTransactionProposal, validateCategoryProposal } from "../validation";
+import { getTodayDateString } from "@/lib/utils";
 
 // ============================================================================
 // READ TOOL EXECUTORS
@@ -188,7 +189,7 @@ export async function executeCreateTransactionChangeRequest(
     amount: converted.amount, // Already in cents
     merchant: converted.merchant || null,
     description: converted.description,
-    date: converted.date || new Date().toISOString().split("T")[0],
+    date: converted.date || getTodayDateString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     deleted_at: null,
