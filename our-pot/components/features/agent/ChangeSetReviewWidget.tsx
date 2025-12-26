@@ -8,6 +8,7 @@ import { useChangeSet } from "@/lib/data/contexts/ChangeSetContext";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { CategoryRepository } from "@/lib/data/repositories/CategoryRepository";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface ChangeSetReviewWidgetProps {
   onApprove: () => void;
@@ -25,7 +26,7 @@ interface ParsedChange {
 }
 
 export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModifyRequest }: ChangeSetReviewWidgetProps) {
-  const { getBufferAsArray } = useChangeSet();
+  const { getBufferAsArray, status, metadata } = useChangeSet();
   const { db } = useSQLite();
   const { account } = useAccount();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -94,12 +95,6 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
     }
   };
 
-  const formatAmount = (amount?: number) => {
-    if (amount === undefined) return null;
-    // Amount is stored in pence, convert to pounds
-    const pounds = amount / 100;
-    return `£${pounds.toFixed(2)}`;
-  };
 
   const handleModifySubmit = () => {
     if (modifyMessage.trim()) {
@@ -125,7 +120,7 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-medium text-foreground text-sm">AI Proposal</p>
+            <p className="font-medium text-foreground text-sm">{metadata?.title || "AI Proposal"}</p>
             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
               {parsedChanges.length} {parsedChanges.length === 1 ? 'change' : 'changes'}
             </span>
@@ -145,6 +140,15 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
+            {/* Description */}
+            {metadata?.description && (
+              <div className="px-4 pb-3">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-sm text-foreground leading-relaxed">{metadata.description}</p>
+                </div>
+              </div>
+            )}
+
             {/* Changes list */}
             <div className="px-4 pb-3 space-y-2">
               {parsedChanges.map((change, index) => (
@@ -170,7 +174,7 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
                           {change.proposedData?.description || "Transaction"}
                         </p>
                         <p className="text-sm text-primary font-medium mt-1">
-                          {formatAmount(change.proposedData?.amount)}
+                          {change.proposedData?.amount && formatCurrency(change.proposedData.amount as number, account?.currency || "GBP")}
                           {change.proposedData?.merchant && (
                             <span className="text-muted-foreground font-normal"> · {change.proposedData.merchant}</span>
                           )}
