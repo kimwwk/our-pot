@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Trash2, Plus, Edit3, ShoppingCart, Tag, Sparkles, ChevronDown, MessageSquare } from "lucide-react";
+import { Check, X, Trash2, Plus, Edit3, ShoppingCart, Sparkles, ChevronDown, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChangeSet } from "@/lib/data/contexts/ChangeSetContext";
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
@@ -33,7 +33,8 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
   const [modifyMessage, setModifyMessage] = useState("");
   const [parsedChanges, setParsedChanges] = useState<ParsedChange[]>([]);
 
-  const changes = getBufferAsArray();
+  // const changes = getBufferAsArray();
+  const changes = useMemo(() => getBufferAsArray(), [getBufferAsArray]);
 
   // Parse changes and look up category names
   useEffect(() => {
@@ -45,8 +46,9 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
       const categoryMap = new Map(categories.map(c => [c.id, c.name]));
 
       const parsed = changes.map(change => {
-        const proposedData = change.proposedData ? JSON.parse(change.proposedData) : null;
-        const categoryName = proposedData?.category_id ? categoryMap.get(proposedData.category_id) : undefined;
+        // Phase 1: proposedData is now an object, not a JSON string
+        const proposedData = change.proposedData;
+        const categoryName = proposedData?.category_id ? categoryMap.get(proposedData.category_id as string) : undefined;
 
         return {
           id: change.id,
@@ -198,12 +200,14 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
             </div>
 
             {/* Modify input */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {showModifyInput && (
                 <motion.div
+                  key="modify-input"
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
                   className="px-4 pb-3"
                 >
                   <div className="rounded-lg bg-muted p-3">
@@ -216,10 +220,18 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
                       autoFocus
                     />
                     <div className="flex justify-end gap-2 mt-2">
-                      <Button size="sm" variant="ghost" onClick={() => setShowModifyInput(false)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowModifyInput(false)}
+                      >
                         Cancel
                       </Button>
-                      <Button size="sm" onClick={handleModifySubmit} disabled={!modifyMessage.trim()}>
+                      <Button
+                        size="sm"
+                        onClick={handleModifySubmit}
+                        disabled={!modifyMessage.trim()}
+                      >
                         Send
                       </Button>
                     </div>
@@ -241,7 +253,7 @@ export function ChangeSetReviewWidget({ onApprove, onReject, onDiscard, onModify
                 <Button
                   variant="outline"
                   className="flex-1 h-11 rounded-lg bg-transparent"
-                  onClick={() => onReject()}
+                  onClick={() => onDiscard()}
                 >
                   <X className="h-4 w-4 mr-2" />
                   Reject

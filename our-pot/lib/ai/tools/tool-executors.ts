@@ -2,6 +2,9 @@
  * Client-side tool executors
  * These functions are called when the AI requests a tool
  * They are separate from tool schemas to support client-side execution
+ *
+ * Phase 1: Refactored to use transformation layer
+ * Reference: doc/20251225-Implementation Plan-ChangeSet Rebuild.md
  */
 
 import { ulid } from "ulid";
@@ -112,15 +115,14 @@ export async function getKittyMemberId(db: any, accountId: string): Promise<stri
 // PROPOSAL TOOL EXECUTORS
 // ============================================================================
 
-export interface ChangeSetActions {
-  addChangeRequest: (key: string, request: any) => void;
-  removeChangeRequest: (key: string) => void;
-}
+// Executor result types
+export type ExecutorResult =
+  | { success: true; enrichedToolInput: Record<string, unknown>; [key: string]: any }
+  | { success: false; error?: string; errors?: any[] };
 
 export async function executeCreateTransactionChangeRequest(
   db: any,
   accountId: string,
-  changeSetActions: ChangeSetActions,
   params: {
     entityId?: string;
     type: "EXPENSE" | "DEPOSIT";
@@ -132,28 +134,22 @@ export async function executeCreateTransactionChangeRequest(
     date?: string;
     action?: "UPSERT" | "DISCARD";
   }
-) {
-  // Handle DISCARD action
+): Promise<ExecutorResult> {
+  // DISCARD: Special action (will be handled in transformation layer)
   if (params.action === "DISCARD") {
     const entityId = params.entityId;
     if (!entityId) {
-      return {
-        success: false,
-        error: "entityId is required for DISCARD action",
-      };
+      return { success: false, error: "entityId is required for DISCARD action" };
     }
-
-    const key = `transaction:${entityId}`;
-    changeSetActions.removeChangeRequest(key);
-
     return {
       success: true,
+      enrichedToolInput: { action: "DISCARD", entityId },
       message: `Removed transaction proposal from changeset`,
-      entityId,
+      entityId
     };
   }
 
-  // Validate and convert proposal
+  // BUSINESS LOGIC: Validate
   const validation = validateTransactionProposal({
     type: params.type,
     amount: params.amount,
@@ -163,25 +159,22 @@ export async function executeCreateTransactionChangeRequest(
     memberId: params.memberId,
     date: params.date,
   });
-
   if (!validation.valid) {
-    return {
-      success: false,
-      errors: validation.errors,
-    };
+    return { success: false, errors: validation.errors };
   }
-
   const converted = validation.converted!;
 
-  // Get default member if not specified
+  // BUSINESS LOGIC: Apply defaults
   const memberId = converted.memberId || (await getKittyMemberId(db, accountId));
+  const date = converted.date || getTodayDateString();
+  const generatedId = ulid();
 
-  // Generate entity ID if not provided
-  const entityId = params.entityId || ulid();
-
-  // Create proposed data (with amount in cents)
-  const proposedData = {
-    id: entityId,
+  // BUSINESS LOGIC: Build enriched tool input (database format)
+  const enrichedToolInput: Record<string, unknown> = {
+    action: params.action,
+    reasoning: (params as any).reasoning,
+    // Database format fields
+    id: params.entityId || generatedId, // ID for database insertion
     account_id: accountId,
     member_id: memberId,
     category_id: converted.categoryId || null,
@@ -189,34 +182,30 @@ export async function executeCreateTransactionChangeRequest(
     amount: converted.amount, // Already in cents
     merchant: converted.merchant || null,
     description: converted.description,
-    date: converted.date || getTodayDateString(),
+    date,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     deleted_at: null,
   };
 
-  // Add to keyed buffer
-  const key = `transaction:${entityId}`;
-  changeSetActions.addChangeRequest(key, {
-    operationType: "create",
-    entityType: "transaction",
-    entityId: null,
-    currentData: null,
-    proposedData: JSON.stringify(proposedData),
-  });
+  // For upserts (modifying existing proposal), include entityId
+  // For new creates, entityId will be null in ChangeRequest
+  if (params.entityId) {
+    enrichedToolInput.entityId = params.entityId;
+  }
 
   return {
     success: true,
+    enrichedToolInput,
     message: `Added transaction proposal to changeset (will be created after approval)`,
-    entityId,
-    amount: params.amount, // Return original decimal
+    entityId: params.entityId || generatedId,
+    amount: params.amount,
   };
 }
 
 export async function executeUpdateTransactionChangeRequest(
   _db: any,
   _accountId: string,
-  changeSetActions: ChangeSetActions,
   params: {
     transactionId: string;
     amount?: number;
@@ -227,92 +216,76 @@ export async function executeUpdateTransactionChangeRequest(
     date?: string;
     action?: "UPSERT" | "DISCARD";
   }
-) {
-  // Handle DISCARD
+): Promise<ExecutorResult> {
+  // DISCARD: Special action (will be handled in transformation layer)
   if (params.action === "DISCARD") {
-    const key = `transaction:${params.transactionId}`;
-    changeSetActions.removeChangeRequest(key);
-
     return {
       success: true,
+      enrichedToolInput: { action: "DISCARD", transactionId: params.transactionId },
       message: `Removed update proposal from changeset`,
-      transactionId: params.transactionId,
+      transactionId: params.transactionId
     };
   }
 
-  // Build proposed data
-  const proposedData: any = {};
+  // BUSINESS LOGIC: Build enriched tool input (only changed fields in database format)
+  const enrichedToolInput: Record<string, unknown> = {
+    transactionId: params.transactionId, // For extractEntityId to find
+    action: params.action,
+    reasoning: (params as any).reasoning,
+  };
 
-  if (params.amount !== undefined) {
-    proposedData.amount = Math.round(params.amount * 100); // Convert to cents
-  }
-  if (params.merchant !== undefined) proposedData.merchant = params.merchant;
-  if (params.description !== undefined) proposedData.description = params.description;
-  if (params.categoryId !== undefined) proposedData.category_id = params.categoryId;
-  if (params.memberId !== undefined) proposedData.member_id = params.memberId;
-  if (params.date !== undefined) proposedData.date = params.date;
-
-  proposedData.updated_at = new Date().toISOString();
-
-  // Add to keyed buffer
-  const key = `transaction:${params.transactionId}`;
-  changeSetActions.addChangeRequest(key, {
-    operationType: "update",
-    entityType: "transaction",
-    entityId: params.transactionId,
-    currentData: null,
-    proposedData: JSON.stringify(proposedData),
-  });
+  if (params.amount !== undefined) enrichedToolInput.amount = Math.round(params.amount * 100); // Convert to cents
+  if (params.merchant !== undefined) enrichedToolInput.merchant = params.merchant;
+  if (params.description !== undefined) enrichedToolInput.description = params.description;
+  if (params.categoryId !== undefined) enrichedToolInput.category_id = params.categoryId;
+  if (params.memberId !== undefined) enrichedToolInput.member_id = params.memberId;
+  if (params.date !== undefined) enrichedToolInput.date = params.date;
+  enrichedToolInput.updated_at = new Date().toISOString();
 
   return {
     success: true,
+    enrichedToolInput,
     message: `Added update proposal to changeset (will be applied after approval)`,
-    transactionId: params.transactionId,
+    transactionId: params.transactionId
   };
 }
 
 export async function executeDeleteTransactionChangeRequest(
   _db: any,
   _accountId: string,
-  changeSetActions: ChangeSetActions,
   params: {
     transactionId: string;
     action?: "UPSERT" | "DISCARD";
   }
-) {
-  // Handle DISCARD
+): Promise<ExecutorResult> {
+  // DISCARD: Special action (will be handled in transformation layer)
   if (params.action === "DISCARD") {
-    const key = `transaction:${params.transactionId}`;
-    changeSetActions.removeChangeRequest(key);
-
     return {
       success: true,
+      enrichedToolInput: { action: "DISCARD", transactionId: params.transactionId },
       message: `Removed delete proposal from changeset`,
-      transactionId: params.transactionId,
+      transactionId: params.transactionId
     };
   }
 
-  // Add to keyed buffer
-  const key = `transaction:${params.transactionId}`;
-  changeSetActions.addChangeRequest(key, {
-    operationType: "delete",
-    entityType: "transaction",
-    entityId: params.transactionId,
-    currentData: null,
-    proposedData: null,
-  });
+  // BUSINESS LOGIC: Build enriched tool input (for delete, only need ID)
+  const enrichedToolInput = {
+    transactionId: params.transactionId, // For extractEntityId to find
+    action: params.action,
+    reasoning: (params as any).reasoning,
+  };
 
   return {
     success: true,
+    enrichedToolInput,
     message: `Added delete proposal to changeset (will be applied after approval)`,
-    transactionId: params.transactionId,
+    transactionId: params.transactionId
   };
 }
 
 export async function executeCreateCategoryChangeRequest(
   _db: any,
   accountId: string,
-  changeSetActions: ChangeSetActions,
   params: {
     entityId?: string;
     name: string;
@@ -320,49 +293,41 @@ export async function executeCreateCategoryChangeRequest(
     color?: string;
     action?: "UPSERT" | "DISCARD";
   }
-) {
-  // Handle DISCARD
+): Promise<ExecutorResult> {
+  // DISCARD: Special action (will be handled in transformation layer)
   if (params.action === "DISCARD") {
     const entityId = params.entityId;
     if (!entityId) {
-      return {
-        success: false,
-        error: "entityId is required for DISCARD action",
-      };
+      return { success: false, error: "entityId is required for DISCARD action" };
     }
-
-    const key = `category:${entityId}`;
-    changeSetActions.removeChangeRequest(key);
-
     return {
       success: true,
+      enrichedToolInput: { action: "DISCARD", entityId },
       message: `Removed category proposal from changeset`,
-      entityId,
+      entityId
     };
   }
 
-  // Validate
+  // BUSINESS LOGIC: Validate
   const validation = validateCategoryProposal({
     name: params.name,
     icon: params.icon,
     color: params.color,
   });
-
   if (!validation.valid) {
-    return {
-      success: false,
-      errors: validation.errors,
-    };
+    return { success: false, errors: validation.errors };
   }
-
   const converted = validation.converted!;
 
-  // Generate entity ID if not provided
-  const entityId = params.entityId || ulid();
+  // BUSINESS LOGIC: Generate ID for database
+  const generatedId = ulid();
 
-  // Create proposed data
-  const proposedData = {
-    id: entityId,
+  // BUSINESS LOGIC: Build enriched tool input (database format)
+  const enrichedToolInput: Record<string, unknown> = {
+    action: params.action,
+    reasoning: (params as any).reasoning,
+    // Database format fields
+    id: params.entityId || generatedId, // ID for database insertion
     account_id: accountId,
     name: converted.name,
     icon: converted.icon || null,
@@ -372,21 +337,18 @@ export async function executeCreateCategoryChangeRequest(
     deleted_at: null,
   };
 
-  // Add to keyed buffer
-  const key = `category:${entityId}`;
-  changeSetActions.addChangeRequest(key, {
-    operationType: "create",
-    entityType: "category",
-    entityId: null,
-    currentData: null,
-    proposedData: JSON.stringify(proposedData),
-  });
+  // For upserts (modifying existing proposal), include entityId
+  // For new creates, entityId will be null in ChangeRequest
+  if (params.entityId) {
+    enrichedToolInput.entityId = params.entityId;
+  }
 
   return {
     success: true,
+    enrichedToolInput,
     message: `Added category proposal to changeset (will be created after approval)`,
-    entityId,
-    name: converted.name,
+    entityId: params.entityId || generatedId,
+    name: converted.name
   };
 }
 

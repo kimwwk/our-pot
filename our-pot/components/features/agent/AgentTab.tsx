@@ -9,17 +9,7 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } fro
 import { useSQLite } from "@/lib/data/contexts/SQLiteContext";
 import { useAccount } from "@/lib/data/contexts/AccountContext";
 import { useChangeSet } from "@/lib/data/contexts/ChangeSetContext";
-import {
-  executeGetCategories,
-  executeGetMembers,
-  executeSearchTransactions,
-  executeCreateTransactionChangeRequest,
-  executeUpdateTransactionChangeRequest,
-  executeDeleteTransactionChangeRequest,
-  executeCreateCategoryChangeRequest,
-  executeConfirmChangeSet,
-  executeResetChangeSet,
-} from "@/lib/ai/tools";
+import { handleToolCall } from "@/lib/ai/transformation";
 import { ChangeSetRepository } from "@/lib/data/repositories/ChangeSetRepository";
 import { buildContextAfterDecision } from "@/lib/ai/prompts";
 import { AgentInputModal } from "./AgentInputModal";
@@ -64,211 +54,88 @@ export function AgentTab() {
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     async onToolCall({ toolCall }) {
-      // CLIENT-SIDE TOOL EXECUTION
-      const { toolName, input: args } = toolCall;
-      // Cast args to any to avoid type errors - tools validate at runtime
-      const typedArgs = args as any;
-
+      console.log('[useChat] onToolCall triggered:', toolCall.toolName);
       // Use refs to get current values (avoid stale closures)
       const currentDb = dbRef.current;
       const currentAccount = accountRef.current;
-      const currentIsInitialized = isInitializedRef.current;
 
-      console.log(`[Tool Call] ${toolName}`, {
-        hasDb: !!currentDb,
-        hasAccount: !!currentAccount,
-        isInitialized: currentIsInitialized,
-        args: typedArgs
-      });
-
+      // Validate required context
       if (!currentDb || !currentAccount) {
-        console.error(`[Tool Call Error] Missing: ${!currentDb ? 'db' : ''} ${!currentAccount ? 'account' : ''}`);
+        console.error(`[Tool Call Error] Missing context: db=${!!currentDb}, account=${!!currentAccount}`);
         addToolOutput({
-          tool: toolName,
+          tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
           state: "output-error",
-          errorText: `Database or account not initialized (db=${!!currentDb}, account=${!!currentAccount})`,
+          errorText: `Database or account not initialized`,
         });
         return;
       }
 
-      try {
-        // READ TOOLS (Immediate Execution)
-        if (toolName === "getCategories") {
-          const result = await executeGetCategories(currentDb, currentAccount.id);
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        if (toolName === "getMembers") {
-          const result = await executeGetMembers(currentDb, currentAccount.id);
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        if (toolName === "searchTransactions") {
-          const result = await executeSearchTransactions(
-            currentDb,
-            currentAccount.id,
-            typedArgs
-          );
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        // PROPOSAL TOOLS (Buffered)
-        if (toolName === "createTransactionChangeRequest") {
-          const result = await executeCreateTransactionChangeRequest(
-            currentDb,
-            currentAccount.id,
-            {
-              addChangeRequest: changeSetContextRef.current.addChangeRequest,
-              removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
-            },
-            typedArgs
-          );
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        if (toolName === "updateTransactionChangeRequest") {
-          const result = await executeUpdateTransactionChangeRequest(
-            currentDb,
-            currentAccount.id,
-            {
-              addChangeRequest: changeSetContextRef.current.addChangeRequest,
-              removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
-            },
-            typedArgs
-          );
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        if (toolName === "deleteTransactionChangeRequest") {
-          const result = await executeDeleteTransactionChangeRequest(
-            currentDb,
-            currentAccount.id,
-            {
-              addChangeRequest: changeSetContextRef.current.addChangeRequest,
-              removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
-            },
-            typedArgs
-          );
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        if (toolName === "createCategoryChangeRequest") {
-          const result = await executeCreateCategoryChangeRequest(
-            currentDb,
-            currentAccount.id,
-            {
-              addChangeRequest: changeSetContextRef.current.addChangeRequest,
-              removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
-            },
-            typedArgs
-          );
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
-        }
-
-        // CONFIRMATION TOOL (Pause-Resume Pattern)
-        if (toolName === "confirmChangeSet") {
-          const result = await executeConfirmChangeSet(
-            {
-              transitionToPendingApproval: changeSetContextRef.current.transitionToPendingApproval,
-              clearBuffer: changeSetContextRef.current.clearBuffer,
-              getBufferAsArray: changeSetContextRef.current.getBufferAsArray,
-            },
-            typedArgs,
-            toolCall.toolCallId,
-            dbRef.current // Pass database instance
-          );
-
-          if (!result.success) {
-            addToolOutput({
-              tool: toolName,
-              toolCallId: toolCall.toolCallId,
-              state: "output-error",
-              errorText: result.error || "Failed to confirm changeset",
-            });
-            return;
-          }
-
-          // Store the tool call ID so handleApprove/handleReject can send the output later
-          pendingConfirmationResolver.current = (resultData: any) => {
-            addToolOutput({
-              tool: toolName,
-              toolCallId: toolCall.toolCallId,
-              output: resultData,
-            });
-          };
-
-          // DO NOT call addToolOutput here - widget will trigger it via handleApprove/handleReject
-          return;
-        }
-
-        // RESET TOOL
-        if (toolName === "resetChangeSet") {
-          const result = await executeResetChangeSet({
+      // Route via central handler
+      const result = await handleToolCall(
+        toolCall.toolName,
+        toolCall.input,
+        {
+          db: currentDb,
+          accountId: currentAccount.id,
+          changeSetActions: {
+            addChangeRequest: changeSetContextRef.current.addChangeRequest,
+            removeChangeRequest: changeSetContextRef.current.removeChangeRequest,
             transitionToPendingApproval: changeSetContextRef.current.transitionToPendingApproval,
             clearBuffer: changeSetContextRef.current.clearBuffer,
             getBufferAsArray: changeSetContextRef.current.getBufferAsArray,
-          });
-          addToolOutput({
-            tool: toolName,
-            toolCallId: toolCall.toolCallId,
-            output: result,
-          });
-          return;
+          },
         }
+      );
 
+      // Handle result based on type
+      if (result.type === 'success') {
+        console.log('[useChat] Tool result: SUCCESS', toolCall.toolName);
         addToolOutput({
-          tool: toolName,
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output: result.output,
+        });
+      } else if (result.type === 'error') {
+        console.log('[useChat] Tool result: ERROR', toolCall.toolName, result.errorText);
+        addToolOutput({
+          tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
           state: "output-error",
-          errorText: `Unknown tool: ${toolName}`,
+          errorText: result.errorText,
         });
-      } catch (error) {
-        console.error(`Tool execution error (${toolName}):`, error);
-        addToolOutput({
-          tool: toolName,
-          toolCallId: toolCall.toolCallId,
-          state: "output-error",
-          errorText: error instanceof Error ? error.message : "Tool execution failed",
+      } else if (result.type === 'pause') {
+        console.log('[useChat] Tool result: PAUSE (confirmChangeSet)', {
+          toolName: toolCall.toolName,
+          toolCallId: toolCall.toolCallId
         });
+        // PAUSE: confirmChangeSet executed successfully, now waiting for user approval
+        // Store resolver so widget can resume AI stream later
+        pendingConfirmationResolver.current = (resultData: any) => {
+          console.log('[useChat] Resolver called with:', resultData);
+          addToolOutput({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: resultData,
+          });
+          console.log('[useChat] addToolOutput called, AI stream should resume');
+        };
+        console.log('[useChat] Resolver stored, waiting for user decision');
+        // DO NOT call addToolOutput here - widget will do it
       }
     },
   });
+
+  // Log status and changeset state changes
+  useEffect(() => {
+    console.log('[AgentTab] State changed:', {
+      chatStatus: status,
+      changeSetStatus: changeSetContext.status,
+      bufferSize: changeSetContext.getBufferAsArray().length,
+      hasPendingResolver: !!pendingConfirmationResolver.current,
+      error: error ? String(error) : null
+    });
+  }, [status, changeSetContext.status, changeSetContext, error]);
 
   // Handle input submission
   const handleSubmit = (message: string) => {
@@ -327,21 +194,27 @@ export function AgentTab() {
   };
 
   const handleReject = (feedback?: string) => {
-    // Iterative refinement - return to building state
-    changeSetContext.transitionToBuilding();
-
-    // Resume AI stream with feedback by calling addToolOutput via resolver
+    // Resume AI stream with feedback FIRST, then transition state
     if (pendingConfirmationResolver.current) {
       const decision = buildContextAfterDecision({
         status: "rejected_with_feedback",
         feedback: feedback || "User requested changes",
       });
 
+      console.log('[AgentTab] Calling resolver with feedback:', decision);
+
       pendingConfirmationResolver.current({
         success: false,
         feedback: decision,
       });
       pendingConfirmationResolver.current = null;
+
+      // Transition to building state AFTER resuming AI
+      changeSetContext.transitionToBuilding();
+    } else {
+      console.error('[AgentTab] No pending resolver - cannot resume AI stream');
+      // If no resolver, just transition back to building
+      changeSetContext.transitionToBuilding();
     }
   };
 
@@ -440,12 +313,36 @@ export function AgentTab() {
       )}
 
       {/* Empty state when no changeset */}
-      {changeSetContext.status !== "pending_approval" && !isProcessing && (
+      {changeSetContext.status !== "pending_approval" && changeSetContext.status !== "building" && !isProcessing && (
         <EmptyState
           icon={Sparkles}
           title="No pending proposals"
           description="Tell the AI about an expense and it will create a changeset for your review"
         />
+      )}
+
+      {/* Building state - AI is revising */}
+      {changeSetContext.status === "building" && !isProcessing && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 rounded-xl bg-muted p-4"
+        >
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, delay: i * 0.2 }}
+                className="w-1.5 h-1.5 rounded-full bg-foreground/50"
+              />
+            ))}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-foreground font-medium">AI is revising the changes...</p>
+            <p className="text-xs text-muted-foreground">Processing your feedback</p>
+          </div>
+        </motion.div>
       )}
 
       {/* Input Modal */}

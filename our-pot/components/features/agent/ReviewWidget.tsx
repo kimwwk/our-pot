@@ -70,11 +70,12 @@ export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWi
 
   const formatChangeData = (request: ChangeRequest) => {
     try {
-      const data = request.proposedData ? JSON.parse(request.proposedData) : {};
+      // Phase 1: proposedData is now an object, not a JSON string
+      const data = request.proposedData || {};
 
       if (request.entityType === "transaction") {
         return {
-          amount: data.amount ? convertCentsToDecimal(data.amount) : null,
+          amount: data.amount ? convertCentsToDecimal(data.amount as number) : null,
           merchant: data.merchant,
           description: data.description,
           type: data.type,
@@ -89,7 +90,7 @@ export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWi
 
       return data;
     } catch (e) {
-      console.error("Failed to parse change data", e);
+      console.error("Failed to format change data", e);
       return {};
     }
   };
@@ -173,14 +174,14 @@ export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWi
                       {request.entityType === "transaction" && (
                         <>
                           <p className="text-sm font-medium text-foreground mt-0.5">
-                            {data.description || "Transaction"}
+                            {(data.description as string) || "Transaction"}
                           </p>
                           {data.amount && (
                             <p className="text-sm text-primary font-medium mt-1">
-                              {formatCurrency(data.amount * 100, account?.currency || "GBP")}
-                              {data.merchant && (
-                                <span className="text-muted-foreground font-normal"> · {data.merchant}</span>
-                              )}
+                              {formatCurrency((data.amount as number) * 100, account?.currency || "GBP")}
+                              {data.merchant ? (
+                                <span className="text-muted-foreground font-normal"> · {data.merchant as string}</span>
+                              ) : null}
                             </p>
                           )}
                         </>
@@ -189,12 +190,12 @@ export function ReviewWidget({ onApprove, onReject, onCompleteReject }: ReviewWi
                       {/* Category display */}
                       {request.entityType === "category" && (
                         <>
-                          <p className="text-sm font-medium text-foreground mt-0.5">{data.name}</p>
-                          {data.icon && (
+                          <p className="text-sm font-medium text-foreground mt-0.5">{data.name as string}</p>
+                          {data.icon ? (
                             <p className="text-sm mt-1">
-                              <span className="mr-1">{data.icon}</span>
+                              <span className="mr-1">{data.icon as string}</span>
                             </p>
-                          )}
+                          ) : null}
                         </>
                       )}
                     </div>
